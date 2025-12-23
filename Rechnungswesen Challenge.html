@@ -1,0 +1,2397 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rechnungswesen Challenge - TechStart AG</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .locked { opacity: 0.4; pointer-events: none; }
+        .shake { animation: shake 0.5s; }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        .pulse-green { animation: pulse-green 1s; }
+        @keyframes pulse-green {
+            0%, 100% { background-color: rgb(134 239 172); }
+            50% { background-color: rgb(74 222 128); }
+        }
+        .badge-glow { 
+            animation: badge-glow 2s infinite;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+        }
+        @keyframes badge-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(59, 130, 246, 0.8); }
+        }
+        input:disabled { background-color: #f3f4f6; cursor: not-allowed; }
+        .bonus-level { border: 3px dashed #9ca3af; }
+        .bonus-level.unlocked { border: 3px solid #10b981; }
+        
+        /* Story Popup Styles */
+        .story-popup-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .story-popup-overlay.active {
+            display: flex;
+        }
+        .story-popup {
+            background: white;
+            border-radius: 16px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: popup-appear 0.3s ease-out;
+        }
+        @keyframes popup-appear {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .brief-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 24px;
+            border-radius: 16px 16px 0 0;
+        }
+        .brief-content {
+            padding: 32px;
+            line-height: 1.8;
+            font-size: 16px;
+        }
+        .brief-footer {
+            padding: 0 32px 32px 32px;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-50 min-h-screen">
+    <div class="w-full max-w-7xl mx-auto p-8">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-xl p-6 mb-8 text-white">
+            <h1 class="text-4xl font-bold mb-4">🎯 Rechnungswesen Challenge</h1>
+            <p class="text-lg mb-4">Unterstütze die TechStart AG und verdiene dir alle Auszeichnungen vom Grundlagen-Meister bis zum Rechnungswesen-Champion.</p>
+            
+            <!-- Kompaktes Dashboard: Fortschritt + Stats in einer Zeile -->
+            <div class="bg-white/20 rounded-lg p-4">
+                <div class="flex items-center gap-6 flex-wrap">
+                    <div class="flex-1 min-w-[200px]">
+                        <div class="text-sm mb-1 font-semibold">Fortschritt</div>
+                        <div class="bg-white/20 rounded-full h-6">
+                            <div id="progress-bar" class="bg-green-400 h-6 rounded-full transition-all duration-500 flex items-center justify-center text-xs font-bold" style="width: 0%">
+                                <span id="progress-text">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex gap-6">
+                        <div class="text-center">
+                            <div class="text-2xl font-bold" id="correct">0</div>
+                            <div class="text-xs">✅ Richtig</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold" id="errors">0</div>
+                            <div class="text-xs">❌ Fehler</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Badge Sammlung -->
+        <div class="bg-white rounded-xl shadow-xl p-6 mb-8">
+            <h2 class="text-2xl font-bold mb-4 text-indigo-800">🏆 Deine Auszeichnungen</h2>
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div id="badge-grundlagen" class="border-2 border-gray-300 rounded-lg p-4 text-center opacity-30">
+                    <div class="text-5xl mb-2">🎓</div>
+                    <div class="font-bold">Grundlagen-Meister</div>
+                    <div class="text-sm text-gray-600">Buchhaltungs-Grundlagen</div>
+                </div>
+                <div id="badge-komplex" class="border-2 border-gray-300 rounded-lg p-4 text-center opacity-30">
+                    <div class="text-5xl mb-2">🔥</div>
+                    <div class="font-bold">Profi-Bucher</div>
+                    <div class="text-sm text-gray-600">Komplexe Buchungen</div>
+                </div>
+                <div id="badge-waren" class="border-2 border-gray-300 rounded-lg p-4 text-center opacity-30">
+                    <div class="text-5xl mb-2">📦</div>
+                    <div class="font-bold">Warenhandel-Meister</div>
+                    <div class="text-sm text-gray-600">Warenhandel</div>
+                </div>
+                <div id="badge-mwst" class="border-2 border-gray-300 rounded-lg p-4 text-center opacity-30">
+                    <div class="text-5xl mb-2">💰</div>
+                    <div class="font-bold">MWST-Experte</div>
+                    <div class="text-sm text-gray-600">Mehrwertsteuer</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info -->
+        <div class="bg-white rounded-xl shadow-xl p-8 mb-8">
+            <h2 class="text-2xl font-bold mb-4 text-indigo-800">📋 So funktioniert's</h2>
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                    <p class="font-semibold text-blue-900">🎯 Buchhaltungs-Grundlagen (5 Schritte)</p>
+                    <p class="text-blue-800 text-sm mt-2">Führe die TechStart AG durch ein komplettes Geschäftsjahr. Schliesse alle Schritte ab und erhalte den "Grundlagen-Meister" Badge!</p>
+                </div>
+                <div class="bg-purple-50 border-l-4 border-purple-500 p-4 rounded">
+                    <p class="font-semibold text-purple-900">⭐ Bonus-Level</p>
+                    <p class="text-purple-800 text-sm mt-2">Nach den Grundlagen schaltest du 3 Bonus-Level frei. Jedes bringt dir einen speziellen Badge!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Start Button -->
+        <div class="text-center mb-8">
+            <button id="start-button" onclick="startChallenge()" class="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-8 py-4 rounded-lg font-bold text-lg hover:from-green-600 hover:to-emerald-700 transition shadow-lg">
+                🚀 Start mit Schritt 1
+            </button>
+        </div>
+
+        <!-- Grundlagen Container (locked bis Start-Button geklickt) -->
+        <div id="grundlagen-container" class="locked">
+            <div class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl p-6 mb-8">
+                <h2 class="text-3xl font-bold mb-2">Teil 1: Buchhaltungs-Grundlagen 🎯</h2>
+                <p class="text-lg">Verdiene dir den "Grundlagen-Meister" Badge</p>
+            </div>
+
+        <!-- SCHRITT 1: Eröffnungsbilanz -->
+        <div id="step-1" class="bg-white rounded-xl shadow-xl p-8 mb-8">
+            <h2 class="text-2xl font-bold mb-6 text-indigo-800 flex items-center gap-2">
+                <span class="bg-indigo-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm">1</span>
+                Ausgangslage: Eröffnungsbilanz per 1.1.2024
+            </h2>
+            
+            <div class="mb-6 bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                <h3 class="font-bold text-blue-900 mb-2">🏢 Deine Mission: Die TechStart AG</h3>
+                <p class="text-blue-800 mb-3">Die TechStart AG ist ein junges IT-Dienstleistungsunternehmen mit Sitz in Zürich. Das Unternehmen bietet IT-Beratung, Softwareentwicklung und technischen Support für kleine und mittlere Unternehmen an. Die Firma beschäftigt drei Mitarbeitende und befindet sich im ersten Geschäftsjahr.</p>
+                <p class="text-blue-800 mb-3">Als frisch eingestellte/r Buchhalter/in hast du eine wichtige Aufgabe: Du sollst dem Geschäftsführer helfen, die Übersicht über die Finanzen im ersten Geschäftsjahr zu behalten. Verschiedene Geschäftsfälle sind angefallen und müssen korrekt verbucht werden.</p>
+                <p class="text-blue-800 font-semibold">Die folgende Eröffnungsbilanz zeigt die finanzielle Ausgangslage zum Start des Geschäftsjahres:</p>
+            </div>
+
+            <h3 class="font-bold text-lg mb-4 text-center text-indigo-900">📊 Eröffnungsbilanz per 1. Januar</h3>
+            <div class="grid grid-cols-2 gap-8 mb-6">
+                <div class="border-2 border-indigo-300 rounded-lg p-6 bg-indigo-50">
+                    <h3 class="font-bold text-xl mb-4 text-indigo-900 border-b-2 border-indigo-300 pb-2">AKTIVEN</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between p-3 bg-white rounded-lg">
+                            <span>Kasse</span><span class="font-bold">8'000</span>
+                        </div>
+                        <div class="flex justify-between p-3 bg-white rounded-lg">
+                            <span>Bank</span><span class="font-bold">30'000</span>
+                        </div>
+                        <div class="flex justify-between p-3 bg-white rounded-lg">
+                            <span>FLL</span><span class="font-bold">12'000</span>
+                        </div>
+                        <div class="flex justify-between p-3 bg-white rounded-lg">
+                            <span>Mobiliar</span><span class="font-bold">10'000</span>
+                        </div>
+                        <div class="flex justify-between p-3 bg-indigo-200 rounded-lg font-bold">
+                            <span>Total</span><span>60'000</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="border-2 border-green-300 rounded-lg p-6 bg-green-50">
+                    <h3 class="font-bold text-xl mb-4 text-green-900 border-b-2 border-green-300 pb-2">PASSIVEN</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between p-3 bg-white rounded-lg">
+                            <span>VLL</span><span class="font-bold">8'000</span>
+                        </div>
+                        <div class="flex justify-between p-3 bg-white rounded-lg">
+                            <span>Darlehensschuld</span><span class="font-bold">15'000</span>
+                        </div>
+                        <div class="flex justify-between p-3 bg-white rounded-lg">
+                            <span>Eigenkapital</span><span class="font-bold">37'000</span>
+                        </div>
+                        <div class="h-12"></div>
+                        <div class="flex justify-between p-3 bg-green-200 rounded-lg font-bold">
+                            <span>Total</span><span>60'000</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8 mb-6 bg-amber-50 border-l-4 border-amber-500 p-4 rounded">
+                <p class="font-semibold text-amber-900 mb-3">📋 Folgende Erfolgskonten werden im Geschäftsjahr verwendet:</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-8 mb-6">
+                <div class="border-2 border-red-300 rounded-lg p-6 bg-red-50">
+                    <h3 class="font-bold text-xl mb-4 text-red-900 border-b-2 border-red-300 pb-2 text-center">AUFWAND</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between p-3 bg-white rounded-lg">
+                            <span>Verwaltungsaufwand</span>
+                        </div>
+                        <div class="flex justify-between p-3 bg-white rounded-lg">
+                            <span>Personalaufwand</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="border-2 border-amber-300 rounded-lg p-6 bg-amber-50">
+                    <h3 class="font-bold text-xl mb-4 text-amber-900 border-b-2 border-amber-300 pb-2 text-center">ERTRAG</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between p-3 bg-white rounded-lg">
+                            <span>Dienstleistungsertrag</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="unlockStep(2)" class="mt-6 bg-indigo-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-indigo-700 transition">
+                Weiter zu Schritt 2 →
+            </button>
+        </div>
+
+        <!-- SCHRITT 2: Buchungssätze -->
+        <div id="step-2" class="bg-white rounded-xl shadow-xl p-8 mb-8">
+            <h2 class="text-2xl font-bold mb-6 text-indigo-800 flex items-center gap-2">
+                <span class="bg-indigo-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm">2</span>
+                Geschäftsfälle - Bilde die Buchungssätze
+            </h2>
+
+            <div class="mb-6 bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded">
+                <p class="font-semibold text-yellow-900">💡 Tipp:</p>
+                <p class="text-yellow-800">Schema: [Soll-Konto] an [Haben-Konto] [Betrag]</p>
+            </div>
+
+            <div class="space-y-6">
+                <div class="border-2 border-purple-300 rounded-lg p-4 bg-purple-50">
+                    <p class="font-semibold mb-3">1) Die TechStart AG hat eine umfangreiche IT-Beratung für die Firma Müller & Co. durchgeführt. Für die erbrachten Dienstleistungen wird eine Rechnung über 5'000 Franken ausgestellt.</p>
+                    <div class="grid grid-cols-3 gap-2">
+                        <input type="text" id="bs1-soll" class="border rounded px-3 py-2" placeholder="Soll-Konto">
+                        <input type="text" id="bs1-haben" class="border rounded px-3 py-2" placeholder="Haben-Konto">
+                        <input type="number" id="bs1-betrag" class="border rounded px-3 py-2" placeholder="Betrag">
+                    </div>
+                </div>
+
+                <div class="border-2 border-purple-300 rounded-lg p-4 bg-purple-50">
+                    <p class="font-semibold mb-3">2) Für das Büro werden dringend neue Verbrauchsmaterialien benötigt. Die TechStart AG kauft bei der Office AG Druckerpapier, Toner und Büromaterial für insgesamt 3'000 Franken und bezahlt den Betrag sofort in bar.</p>
+                    <div class="grid grid-cols-3 gap-2">
+                        <input type="text" id="bs2-soll" class="border rounded px-3 py-2" placeholder="Soll-Konto">
+                        <input type="text" id="bs2-haben" class="border rounded px-3 py-2" placeholder="Haben-Konto">
+                        <input type="number" id="bs2-betrag" class="border rounded px-3 py-2" placeholder="Betrag">
+                    </div>
+                </div>
+
+                <div class="border-2 border-purple-300 rounded-lg p-4 bg-purple-50">
+                    <p class="font-semibold mb-3">3) Ende Monat werden die Gehälter der drei Mitarbeitenden fällig. Die TechStart AG überweist die gesamten Lohnkosten von 6'000 Franken vom Geschäftsbankkonto auf die Konten der Angestellten.</p>
+                    <div class="grid grid-cols-3 gap-2">
+                        <input type="text" id="bs3-soll" class="border rounded px-3 py-2" placeholder="Soll-Konto">
+                        <input type="text" id="bs3-haben" class="border rounded px-3 py-2" placeholder="Haben-Konto">
+                        <input type="number" id="bs3-betrag" class="border rounded px-3 py-2" placeholder="Betrag">
+                    </div>
+                </div>
+
+                <div class="border-2 border-purple-300 rounded-lg p-4 bg-purple-50">
+                    <p class="font-semibold mb-3">4) Die TechStart AG hatte vom Lieferanten Techno GmbH im letzten Monat IT-Equipment auf Rechnung bezogen. Nun wird die ausstehende Rechnung über 4'000 Franken per Banküberweisung beglichen.</p>
+                    <div class="grid grid-cols-3 gap-2">
+                        <input type="text" id="bs4-soll" class="border rounded px-3 py-2" placeholder="Soll-Konto">
+                        <input type="text" id="bs4-haben" class="border rounded px-3 py-2" placeholder="Haben-Konto">
+                        <input type="number" id="bs4-betrag" class="border rounded px-3 py-2" placeholder="Betrag">
+                    </div>
+                </div>
+
+                <div class="border-2 border-purple-300 rounded-lg p-4 bg-purple-50">
+                    <p class="font-semibold mb-3">5) Gute Nachrichten: Der Kunde Berger AG überweist die offene Rechnung über 7'000 Franken für die im Vormonat erbrachte Programmierleistung. Der Betrag geht auf dem Bankkonto der TechStart AG ein.</p>
+                    <div class="grid grid-cols-3 gap-2">
+                        <input type="text" id="bs5-soll" class="border rounded px-3 py-2" placeholder="Soll-Konto">
+                        <input type="text" id="bs5-haben" class="border rounded px-3 py-2" placeholder="Haben-Konto">
+                        <input type="number" id="bs5-betrag" class="border rounded px-3 py-2" placeholder="Betrag">
+                    </div>
+                </div>
+
+                <div class="border-2 border-purple-300 rounded-lg p-4 bg-purple-50">
+                    <p class="font-semibold mb-3">6) Gemäss Rückzahlungsplan muss die TechStart AG die erste Rate des Darlehens zurückzahlen, das die Geschäftsführerin bei Firmengründung aufgenommen hatte. Der Betrag von 3'000 Franken wird per Banküberweisung überwiesen.</p>
+                    <div class="grid grid-cols-3 gap-2">
+                        <input type="text" id="bs6-soll" class="border rounded px-3 py-2" placeholder="Soll-Konto">
+                        <input type="text" id="bs6-haben" class="border rounded px-3 py-2" placeholder="Haben-Konto">
+                        <input type="number" id="bs6-betrag" class="border rounded px-3 py-2" placeholder="Betrag">
+                    </div>
+                </div>
+            </div>
+
+            <div id="step2-feedback" class="mt-6"></div>
+            <button onclick="checkStep2()" class="mt-6 bg-green-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-green-700 transition">
+                Prüfen
+            </button>
+        </div>
+
+        <!-- SCHRITT 3: Kontenführung (AB + Buchungen + Salden) -->
+        <div id="step-3" class="bg-white rounded-xl shadow-xl p-8 mb-8">
+            <h2 class="text-2xl font-bold mb-6 text-indigo-800 flex items-center gap-2">
+                <span class="bg-indigo-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm">3</span>
+                Kontenführung - AB eintragen, buchen und Salden bilden
+            </h2>
+
+            <div class="mb-6 bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded">
+                <p class="font-semibold text-yellow-900">💡 Anleitung:</p>
+                <p class="text-yellow-800 text-sm mt-2">Fülle die <span class="bg-yellow-200 px-1 font-bold">gelb markierten Felder</span> aus:</p>
+                <ol class="text-yellow-800 text-sm mt-2 list-decimal list-inside space-y-1">
+                    <li>Trage fehlende Anfangsbestände (AB) aus der Eröffnungsbilanz ein</li>
+                    <li>Ergänze fehlende Buchungsbeträge aus den Geschäftsfällen</li>
+                    <li>Berechne die fehlenden Salden</li>
+                    <li>Die Totale werden automatisch angezeigt</li>
+                </ol>
+            </div>
+
+            <h3 class="text-lg font-bold mb-4 text-indigo-700">Bilanzkonten (Aktiven)</h3>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- Kasse -->
+                <div class="border-2 border-indigo-400 rounded-lg bg-indigo-50 p-4">
+                    <div class="bg-indigo-600 text-white font-bold p-2 text-center rounded mb-3">Kasse</div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <div class="text-xs text-gray-600 mb-2">Soll</div>
+                            <div class="space-y-2">
+                                <div class="text-sm text-gray-600">AB 8'000</div>
+                            </div>
+                            <div class="mt-3 pt-2 border-t-2 border-indigo-300">
+                                <input type="number" id="kasse-soll-total" class="w-full border rounded px-2 py-1 font-bold hidden" placeholder="Total Soll">
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-600 mb-2">Haben</div>
+                            <div class="space-y-2 text-sm text-gray-600 italic">
+                                <div>2) 3'000</div>
+                            </div>
+                            <div class="mt-3 pt-2 border-t-2 border-indigo-300 space-y-2">
+                                <input type="number" id="saldo-kasse" class="w-full border-2 border-green-400 rounded px-2 py-1 font-bold text-green-700 bg-yellow-50" placeholder="Saldo berechnen">
+                                <input type="number" id="kasse-haben-total" class="w-full border rounded px-2 py-1 font-bold hidden" placeholder="Total Haben">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bank -->
+                <div class="border-2 border-indigo-400 rounded-lg bg-indigo-50 p-4">
+                    <div class="bg-indigo-600 text-white font-bold p-2 text-center rounded mb-3">Bank</div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <div class="text-xs text-gray-600 mb-2">Soll</div>
+                            <div class="space-y-2">
+                                <div class="text-sm text-gray-600">AB 30'000</div>
+                                <div class="text-sm text-gray-600 italic">5) 7'000</div>
+                            </div>
+                            <div class="mt-3 pt-2 border-t-2 border-indigo-300">
+                                <input type="number" id="bank-soll-total" class="w-full border rounded px-2 py-1 font-bold hidden" placeholder="Total Soll">
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-600 mb-2">Haben</div>
+                            <div class="space-y-2">
+                                <input type="number" id="bank-haben-3" class="w-full border rounded px-2 py-1 text-sm bg-yellow-50" placeholder="3) Betrag">
+                                <div class="text-sm text-gray-600 italic">4) 4'000</div>
+                                <div class="text-sm text-gray-600 italic">6) 3'000</div>
+                            </div>
+                            <div class="mt-3 pt-2 border-t-2 border-indigo-300 space-y-2">
+                                <input type="number" id="saldo-bank" class="w-full border-2 border-green-400 rounded px-2 py-1 font-bold text-green-700" placeholder="Saldo">
+                                <input type="number" id="bank-haben-total" class="w-full border rounded px-2 py-1 font-bold hidden" placeholder="Total Haben">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FLL -->
+                <div class="border-2 border-indigo-400 rounded-lg bg-indigo-50 p-4">
+                    <div class="bg-indigo-600 text-white font-bold p-2 text-center rounded mb-3">FLL</div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <div class="text-xs text-gray-600 mb-2">Soll</div>
+                            <div class="space-y-2">
+                                <div class="text-sm text-gray-600">AB 12'000</div>
+                                <input type="number" id="fll-soll-1" class="w-full border rounded px-2 py-1 text-sm bg-yellow-50" placeholder="1) Betrag">
+                            </div>
+                            <div class="mt-3 pt-2 border-t-2 border-indigo-300">
+                                <input type="number" id="fll-soll-total" class="w-full border rounded px-2 py-1 font-bold hidden" placeholder="Total Soll">
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-600 mb-2">Haben</div>
+                            <div class="space-y-2">
+                                <div class="text-sm text-gray-600 italic">5) 7'000</div>
+                            </div>
+                            <div class="mt-3 pt-2 border-t-2 border-indigo-300 space-y-2">
+                                <input type="number" id="saldo-fll" class="w-full border-2 border-green-400 rounded px-2 py-1 font-bold text-green-700" placeholder="Saldo">
+                                <input type="number" id="fll-haben-total" class="w-full border rounded px-2 py-1 font-bold hidden" placeholder="Total Haben">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mobiliar -->
+                <div class="border-2 border-indigo-400 rounded-lg bg-indigo-50 p-4">
+                    <div class="bg-indigo-600 text-white font-bold p-2 text-center rounded mb-3">Mobiliar</div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <div class="text-xs text-gray-600 mb-2">Soll</div>
+                            <input type="number" id="mobiliar-ab" class="w-full border rounded px-2 py-1 text-sm bg-yellow-50" placeholder="AB eintragen">
+                            <div class="mt-3 pt-2 border-t-2 border-indigo-300">
+                                <input type="number" id="mobiliar-soll-total" class="w-full border rounded px-2 py-1 font-bold hidden" placeholder="Total Soll">
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-600 mb-2">Haben</div>
+                            <div class="mt-3 pt-2 border-t-2 border-indigo-300 space-y-2">
+                                <input type="number" id="saldo-mobiliar" class="w-full border-2 border-green-400 rounded px-2 py-1 font-bold text-green-700" placeholder="Saldo">
+                                <input type="number" id="mobiliar-haben-total" class="w-full border rounded px-2 py-1 font-bold hidden" placeholder="Total Haben">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h3 class="text-lg font-bold mb-4 text-green-700">Bilanzkonten (Passiven)</h3>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- VLL -->
+                <div class="border-2 border-green-400 rounded-lg bg-green-50 p-4">
+                    <div class="bg-green-600 text-white font-bold p-2 text-center rounded mb-3">VLL</div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <div class="text-xs text-gray-600 mb-2">Soll</div>
+                            <div class="text-sm text-gray-600 italic">4) 4'000</div>
+                            <div class="mt-3 pt-2 border-t-2 border-green-300 space-y-2">
+                                <input type="number" id="saldo-vll" class="w-full border-2 border-green-400 rounded px-2 py-1 font-bold text-green-700 bg-yellow-50" placeholder="Saldo berechnen">
+                                <input type="number" id="vll-soll-total" class="w-full border rounded px-2 py-1 font-bold hidden" placeholder="Total Soll">
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-600 mb-2">Haben</div>
+                            <input type="number" id="vll-ab" class="w-full border rounded px-2 py-1 text-sm bg-yellow-50" placeholder="AB eintragen">
+                            <div class="mt-3 pt-2 border-t-2 border-green-300">
+                                <input type="number" id="vll-haben-total" class="w-full border rounded px-2 py-1 font-bold hidden" placeholder="Total Haben">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Darlehensschuld -->
+                <div class="border-2 border-green-400 rounded-lg bg-green-50 p-4">
+                    <div class="bg-green-600 text-white font-bold p-2 text-center rounded mb-3">Darlehensschuld</div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <div class="text-xs text-gray-600 mb-2">Soll</div>
+                            <div class="text-sm text-gray-600 italic">6) 3'000</div>
+                            <div class="mt-3 pt-2 border-t-2 border-green-300 space-y-2">
+                                <input type="number" id="saldo-darlehensschuld" class="w-full border-2 border-green-400 rounded px-2 py-1 font-bold text-green-700" placeholder="Saldo">
+                                <input type="number" id="darlehensschuld-soll-total" class="w-full border rounded px-2 py-1 font-bold hidden" placeholder="Total Soll">
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-600 mb-2">Haben</div>
+                            <div class="text-sm text-gray-600">AB 15'000</div>
+                            <div class="mt-3 pt-2 border-t-2 border-green-300">
+                                <input type="number" id="darlehensschuld-haben-total" class="w-full border rounded px-2 py-1 font-bold hidden" placeholder="Total Haben">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Eigenkapital -->
+                <div class="border-2 border-green-400 rounded-lg bg-green-50 p-4">
+                    <div class="bg-green-600 text-white font-bold p-2 text-center rounded mb-3">Eigenkapital</div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <div class="text-xs text-gray-600 mb-2">Soll</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-600 mb-2">Haben</div>
+                            <div class="text-sm text-gray-600">AB 37'000</div>
+                        </div>
+                    </div>
+                    <div class="mt-3 pt-3 border-t-2 border-green-300">
+                        <div class="text-sm text-gray-500 italic text-center">Saldo nach ER eintragen</div>
+                    </div>
+                </div>
+            </div>
+
+            <h3 class="text-lg font-bold mb-4 text-amber-700">Erfolgskonten</h3>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Dienstleistungsertrag -->
+                <div class="border-2 border-amber-400 rounded-lg bg-amber-50 p-4">
+                    <div class="bg-amber-600 text-white font-bold p-2 text-center rounded mb-3">Dienstleistungsertrag</div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <div class="text-xs text-gray-600 mb-2">Soll</div>
+                            <div class="mt-3 pt-2 border-t-2 border-amber-300 space-y-2">
+                                <input type="number" id="saldo-dienstleistungsertrag" class="w-full border-2 border-green-400 rounded px-2 py-1 font-bold text-green-700 bg-yellow-50" placeholder="Saldo berechnen">
+                                <input type="number" id="dienstleistungsertrag-soll-total" class="w-full border rounded px-2 py-1 font-bold hidden" placeholder="Total Soll">
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-600 mb-2">Haben</div>
+                            <div class="text-sm text-gray-600 italic">1) 5'000</div>
+                            <div class="mt-3 pt-2 border-t-2 border-amber-300">
+                                <input type="number" id="dienstleistungsertrag-haben-total" class="w-full border rounded px-2 py-1 font-bold hidden" placeholder="Total Haben">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Verwaltungsaufwand -->
+                <div class="border-2 border-red-400 rounded-lg bg-red-50 p-4">
+                    <div class="bg-red-600 text-white font-bold p-2 text-center rounded mb-3">Verwaltungsaufwand</div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <div class="text-xs text-gray-600 mb-2">Soll</div>
+                            <input type="number" id="verwaltungsaufwand-soll-2" class="w-full border rounded px-2 py-1 text-sm bg-yellow-50" placeholder="2) Betrag">
+                            <div class="mt-3 pt-2 border-t-2 border-red-300">
+                                <input type="number" id="verwaltungsaufwand-soll-total" class="w-full border rounded px-2 py-1 font-bold hidden" placeholder="Total Soll">
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-600 mb-2">Haben</div>
+                            <div class="mt-3 pt-2 border-t-2 border-red-300 space-y-2">
+                                <input type="number" id="saldo-verwaltungsaufwand" class="w-full border-2 border-green-400 rounded px-2 py-1 font-bold text-green-700 bg-yellow-50" placeholder="Saldo berechnen">
+                                <input type="number" id="verwaltungsaufwand-haben-total" class="w-full border rounded px-2 py-1 font-bold hidden" placeholder="Total Haben">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lohnaufwand -->
+                <div class="border-2 border-red-400 rounded-lg bg-red-50 p-4">
+                    <div class="bg-red-600 text-white font-bold p-2 text-center rounded mb-3">Lohnaufwand</div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <div class="text-xs text-gray-600 mb-2">Soll</div>
+                            <div class="text-sm text-gray-600 italic">3) 6'000</div>
+                            <div class="mt-3 pt-2 border-t-2 border-red-300">
+                                <input type="number" id="lohnaufwand-soll-total" class="w-full border rounded px-2 py-1 font-bold hidden" placeholder="Total Soll">
+                            </div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-600 mb-2">Haben</div>
+                            <div class="mt-3 pt-2 border-t-2 border-red-300 space-y-2">
+                                <input type="number" id="saldo-lohnaufwand" class="w-full border-2 border-green-400 rounded px-2 py-1 font-bold text-green-700" placeholder="Saldo">
+                                <input type="number" id="lohnaufwand-haben-total" class="w-full border rounded px-2 py-1 font-bold hidden" placeholder="Total Haben">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="step3-feedback" class="mt-6"></div>
+            <button onclick="checkStep3()" class="mt-6 bg-green-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-green-700 transition">
+                Prüfen
+            </button>
+        </div>
+
+        <!-- SCHRITT 4: Erfolgsrechnung -->
+        <div id="step-4" class="bg-white rounded-xl shadow-xl p-8 mb-8">
+            <h2 class="text-2xl font-bold mb-6 text-indigo-800 flex items-center gap-2">
+                <span class="bg-indigo-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm">4</span>
+                Erfolgsrechnung - Berechne Gewinn oder Verlust
+            </h2>
+
+            <div class="grid grid-cols-2 gap-8 mb-6">
+                <div class="border-2 border-red-300 rounded-lg p-6 bg-red-50">
+                    <h3 class="font-bold text-xl mb-4 text-red-900 text-center">Aufwände</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center p-2 bg-white rounded">
+                            <span>Verwaltungsaufwand</span>
+                            <input type="number" id="er-verwaltungsaufwand" class="border rounded px-3 py-1 w-28 font-bold" placeholder="Betrag">
+                        </div>
+                        <div class="flex justify-between items-center p-2 bg-white rounded">
+                            <span>Personalaufwand</span>
+                            <input type="number" id="er-personalaufwand" class="border rounded px-3 py-1 w-28 font-bold" placeholder="Betrag">
+                        </div>
+                        <div class="flex justify-between items-center p-2 bg-red-200 rounded font-bold">
+                            <span>Total Aufwände</span>
+                            <input type="number" id="er-total-aufwand" class="border-2 border-red-600 rounded px-3 py-1 w-28 font-bold" placeholder="Total">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-2 border-amber-300 rounded-lg p-6 bg-amber-50">
+                    <h3 class="font-bold text-xl mb-4 text-amber-900 text-center">Erträge</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center p-2 bg-white rounded">
+                            <span>Dienstleistungsertrag</span>
+                            <input type="number" id="er-dienstleistungsertrag" class="border rounded px-3 py-1 w-28 font-bold" placeholder="Betrag">
+                        </div>
+                        <div class="h-12"></div>
+                        <div class="flex justify-between items-center p-2 bg-amber-200 rounded font-bold">
+                            <span>Total Erträge</span>
+                            <input type="number" id="er-total-ertrag" class="border-2 border-amber-600 rounded px-3 py-1 w-28 font-bold" placeholder="Total">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border-2 border-indigo-400 rounded-lg p-6 bg-indigo-50">
+                <h3 class="font-bold text-xl mb-4 text-center">Gewinn oder Verlust?</h3>
+                <div class="flex gap-4 items-center justify-center">
+                    <input type="number" id="gewinn-verlust" class="border rounded px-4 py-2 text-xl font-bold w-48 text-center" placeholder="Betrag">
+                    <select id="gewinn-verlust-typ" class="border rounded px-4 py-2 text-xl font-bold">
+                        <option value="">Wähle...</option>
+                        <option value="gewinn">Gewinn</option>
+                        <option value="verlust">Verlust</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="step4-feedback" class="mt-6"></div>
+            <button onclick="checkStep4()" class="mt-6 bg-green-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-green-700 transition">
+                Prüfen
+            </button>
+        </div>
+
+        <!-- SCHRITT 5: Schlussbilanz -->
+        <div id="step-5" class="bg-white rounded-xl shadow-xl p-8 mb-8">
+            <h2 class="text-2xl font-bold mb-6 text-indigo-800 flex items-center gap-2">
+                <span class="bg-indigo-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm">5</span>
+                Schlussbilanz - Erstelle die Schlussbilanz
+            </h2>
+
+            <div class="mb-6 bg-amber-50 border-l-4 border-amber-500 p-4 rounded">
+                <p class="font-semibold text-amber-900 mb-2">⚠️ Wichtig: Erfolgsverrechnung</p>
+                <p class="text-amber-800">Der Erfolg (Gewinn oder Verlust) aus der Erfolgsrechnung muss mit dem Eigenkapital verrechnet werden!</p>
+                <p class="text-amber-700 mt-2"><strong>EK neu = EK alt +/− Erfolg</strong></p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-8">
+                <div class="border-2 border-indigo-300 rounded-lg p-6 bg-indigo-50">
+                    <h3 class="font-bold text-xl mb-4 text-center">AKTIVEN</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span>Kasse</span>
+                            <input type="number" id="sb-kasse" class="border rounded px-3 py-1 w-32" placeholder="Betrag">
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>Bank</span>
+                            <input type="number" id="sb-bank" class="border rounded px-3 py-1 w-32" placeholder="Betrag">
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>FLL</span>
+                            <input type="number" id="sb-fll" class="border rounded px-3 py-1 w-32" placeholder="Betrag">
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>Mobiliar</span>
+                            <input type="number" id="sb-mobiliar" class="border rounded px-3 py-1 w-32" placeholder="Betrag">
+                        </div>
+                        <div class="flex justify-between items-center p-2 bg-indigo-200 rounded font-bold">
+                            <span>Total</span>
+                            <input type="number" id="sb-total-aktiven" class="border rounded px-3 py-1 w-32 font-bold" placeholder="Total">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-2 border-green-300 rounded-lg p-6 bg-green-50">
+                    <h3 class="font-bold text-xl mb-4 text-center">PASSIVEN</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span>VLL</span>
+                            <input type="number" id="sb-vll" class="border rounded px-3 py-1 w-32" placeholder="Betrag">
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>Darlehensschuld</span>
+                            <input type="number" id="sb-darlehensschuld" class="border rounded px-3 py-1 w-32" placeholder="Betrag">
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>Eigenkapital</span>
+                            <input type="number" id="sb-eigenkapital" class="border rounded px-3 py-1 w-32" placeholder="Betrag">
+                        </div>
+                        <div class="h-8"></div>
+                        <div class="flex justify-between items-center p-2 bg-green-200 rounded font-bold">
+                            <span>Total</span>
+                            <input type="number" id="sb-total-passiven" class="border rounded px-3 py-1 w-32 font-bold" placeholder="Total">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="step5-feedback" class="mt-6"></div>
+            <button onclick="checkStep5()" class="mt-6 bg-green-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-green-700 transition">
+                Prüfen und Grundlagen abschliessen!
+            </button>
+        </div>
+
+        <!-- Zwischen-Erfolg -->
+        <div id="hauptchallenge-success" class="hidden bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-xl p-6 mb-8 text-white">
+            <div class="text-center">
+                <div class="text-5xl mb-3">🎓</div>
+                <h2 class="text-3xl font-bold mb-2">Grundlagen geschafft!</h2>
+                <p class="text-lg mb-4">Du hast den "Grundlagen-Meister" Badge verdient! 🎯</p>
+                <p class="text-base">Die Bonus-Level sind jetzt freigeschaltet. Meistere sie alle! 👑</p>
+            </div>
+        </div>
+        </div>
+        <!-- Ende Grundlagen Container -->
+
+        <!-- BONUS LEVEL BEREICH -->
+        <div id="bonus-section" class="hidden">
+            <div class="bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-xl p-6 mb-8">
+                <h2 class="text-3xl font-bold mb-2">Teil 2: Bonus-Level ⭐</h2>
+                <p class="text-lg">Verdiene dir alle Spezial-Badges!</p>
+            </div>
+
+            <!-- BONUS 1: Komplexe Buchungen -->
+            <div id="bonus-1" class="bg-white rounded-xl shadow-xl p-8 mb-8 bonus-level locked">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-purple-800 flex items-center gap-2">
+                        <span class="text-4xl">🔥</span>
+                        Bonus-Level 1: Profi-Bucher
+                    </h2>
+                    <span class="text-purple-600 font-bold">+350 Punkte</span>
+                </div>
+
+                <div class="mb-6 bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                    <p class="font-semibold text-blue-900 mb-2">📅 Das zweite Geschäftsjahr beginnt...</p>
+                    <p class="text-blue-800 mb-3">Nach dem erfolgreichen ersten Jahr bei der TechStart AG bist du nun die erste Anlaufstelle für alle buchhalterischen Fragen geworden. Im zweiten Geschäftsjahr warten neue Herausforderungen auf dich: Internationale Geschäfte, komplexe Rabatt- und Skontoberechnungen sowie strategische Entscheidungen zur Schuldenreduktion. Der Geschäftsführer zählt auf deine Expertise!</p>
+                    <p class="text-blue-800"><strong>Neues Konto:</strong> Für Investitionen in Server, Software-Lizenzen und andere langlebige IT-Güter wird das Anlagekonto <strong>"IT-Anlagen"</strong> verwendet. Verbrauchsmaterial wie Büromaterial bleibt weiterhin im Verwaltungsaufwand.</p>
+                </div>
+
+                <div class="mb-6 bg-purple-50 border-l-4 border-purple-500 p-4 rounded">
+                    <p class="font-semibold text-purple-900">Komplexe Buchungen: Rabatte, Skonti, Teilrückzahlungen und Währungen</p>
+                    <p class="text-purple-800 text-sm mt-2">💡 Tipp: Bei Prozentangaben musst du die Beträge selbst berechnen!</p>
+                </div>
+
+                <div class="space-y-6">
+                    <!-- Aufgabe 1: Rabatt FLL-Sicht -->
+                    <div class="border-2 border-purple-300 rounded-lg p-4 bg-purple-50">
+                        <p class="font-semibold mb-3">1) Die TechStart AG führt für einen Grosskunden ein umfangreiches IT-Projekt durch. Der ursprünglich vereinbarte Preis beträgt 20'000 Franken. Aufgrund der Projektgrösse gewährt die TechStart AG dem Kunden einen Rabatt von 10%. Die Rechnung wird nun mit dem rabattierten Betrag erstellt und verbucht.</p>
+                        <div class="grid grid-cols-3 gap-2">
+                            <input type="text" id="bonus1-bs1-soll" class="border rounded px-3 py-2" placeholder="Soll-Konto">
+                            <input type="text" id="bonus1-bs1-haben" class="border rounded px-3 py-2" placeholder="Haben-Konto">
+                            <input type="number" id="bonus1-bs1-betrag" class="border rounded px-3 py-2" placeholder="Betrag">
+                        </div>
+                    </div>
+
+                    <!-- Aufgabe 2: Skonto + Bezahlung FLL-Sicht (2 Buchungen) -->
+                    <div class="border-2 border-purple-300 rounded-lg p-4 bg-purple-50">
+                        <p class="font-semibold mb-3">2) Der Kunde aus Aufgabe 1 bezahlt die Rechnung innerhalb der Skontofrist. Die TechStart AG gewährt 2% Skonto auf den (bereits rabattierten) Rechnungsbetrag. Verbuche zuerst den Skontoabzug, dann die Zahlung des Restbetrags auf das Bankkonto.</p>
+                        <div class="mb-3">
+                            <label class="text-sm text-gray-600 font-semibold">Buchung 1 (Skontoabzug):</label>
+                            <div class="grid grid-cols-3 gap-2 mt-1">
+                                <input type="text" id="bonus1-bs2a-soll" class="border rounded px-3 py-2" placeholder="Soll-Konto">
+                                <input type="text" id="bonus1-bs2a-haben" class="border rounded px-3 py-2" placeholder="Haben-Konto">
+                                <input type="number" id="bonus1-bs2a-betrag" class="border rounded px-3 py-2" placeholder="Betrag">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-sm text-gray-600 font-semibold">Buchung 2 (Zahlung auf Bank):</label>
+                            <div class="grid grid-cols-3 gap-2 mt-1">
+                                <input type="text" id="bonus1-bs2b-soll" class="border rounded px-3 py-2" placeholder="Soll-Konto">
+                                <input type="text" id="bonus1-bs2b-haben" class="border rounded px-3 py-2" placeholder="Haben-Konto">
+                                <input type="number" id="bonus1-bs2b-betrag" class="border rounded px-3 py-2" placeholder="Betrag">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Aufgabe 3: Rabatt VLL-Sicht -->
+                    <div class="border-2 border-purple-300 rounded-lg p-4 bg-purple-50">
+                        <p class="font-semibold mb-3">3) Die TechStart AG hat bereits eine Rechnung über 15'000 Franken für Server-Hardware erhalten und verbucht. Der Lieferant gewährt nachträglich noch 5% Rabatt wegen der Grossbestellung und stellt eine Gutschrift aus. Verbuche die Korrektur durch den Rabatt.</p>
+                        <div class="grid grid-cols-3 gap-2">
+                            <input type="text" id="bonus1-bs3-soll" class="border rounded px-3 py-2" placeholder="Soll-Konto">
+                            <input type="text" id="bonus1-bs3-haben" class="border rounded px-3 py-2" placeholder="Haben-Konto">
+                            <input type="number" id="bonus1-bs3-betrag" class="border rounded px-3 py-2" placeholder="Betrag">
+                        </div>
+                    </div>
+
+                    <!-- Aufgabe 4: Rabatt + Skonto + Bezahlung VLL-Sicht (3 Buchungen) -->
+                    <div class="border-2 border-purple-300 rounded-lg p-4 bg-purple-50">
+                        <p class="font-semibold mb-3">4) Die TechStart AG kauft bei einem Lieferanten Verbrauchsmaterial für das Büro (Druckerpapier, Toner, Stifte). Der ursprünglich vereinbarte Preis beträgt 2'000 Franken. Der Lieferant gewährt 10% Rabatt. Die Rechnung wird mit dem rabattierten Betrag erstellt und verbucht. Die TechStart AG zahlt innerhalb der Skontofrist und erhält zusätzlich 3% Skonto auf den rabattierten Betrag. Verbuche: Rechnung mit Rabatt, Skontoabzug, Zahlung vom Bankkonto.</p>
+                        <div class="mb-3">
+                            <label class="text-sm text-gray-600 font-semibold">Buchung 1 (Rechnung mit Rabatt):</label>
+                            <div class="grid grid-cols-3 gap-2 mt-1">
+                                <input type="text" id="bonus1-bs4a-soll" class="border rounded px-3 py-2" placeholder="Soll-Konto">
+                                <input type="text" id="bonus1-bs4a-haben" class="border rounded px-3 py-2" placeholder="Haben-Konto">
+                                <input type="number" id="bonus1-bs4a-betrag" class="border rounded px-3 py-2" placeholder="Betrag">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="text-sm text-gray-600 font-semibold">Buchung 2 (Skontoabzug):</label>
+                            <div class="grid grid-cols-3 gap-2 mt-1">
+                                <input type="text" id="bonus1-bs4b-soll" class="border rounded px-3 py-2" placeholder="Soll-Konto">
+                                <input type="text" id="bonus1-bs4b-haben" class="border rounded px-3 py-2" placeholder="Haben-Konto">
+                                <input type="number" id="bonus1-bs4b-betrag" class="border rounded px-3 py-2" placeholder="Betrag">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-sm text-gray-600 font-semibold">Buchung 3 (Zahlung von Bank):</label>
+                            <div class="grid grid-cols-3 gap-2 mt-1">
+                                <input type="text" id="bonus1-bs4c-soll" class="border rounded px-3 py-2" placeholder="Soll-Konto">
+                                <input type="text" id="bonus1-bs4c-haben" class="border rounded px-3 py-2" placeholder="Haben-Konto">
+                                <input type="number" id="bonus1-bs4c-betrag" class="border rounded px-3 py-2" placeholder="Betrag">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Aufgabe 5: Teilrückzahlung Darlehen -->
+                    <div class="border-2 border-purple-300 rounded-lg p-4 bg-purple-50">
+                        <p class="font-semibold mb-3">5) Am Ende des zweiten Geschäftsjahres möchte die TechStart AG ihre finanzielle Belastung reduzieren und zahlt 20% der in der Schlussbilanz (aus dem Grundlagen-Teil) ausgewiesenen Darlehensschuld vorzeitig zurück. Der Betrag wird vom Bankkonto überwiesen. (Hinweis: Schaue in der Schlussbilanz nach, wie hoch die Darlehensschuld dort ist!)</p>
+                        <div class="grid grid-cols-3 gap-2">
+                            <input type="text" id="bonus1-bs5-soll" class="border rounded px-3 py-2" placeholder="Soll-Konto">
+                            <input type="text" id="bonus1-bs5-haben" class="border rounded px-3 py-2" placeholder="Haben-Konto">
+                            <input type="number" id="bonus1-bs5-betrag" class="border rounded px-3 py-2" placeholder="Betrag">
+                        </div>
+                    </div>
+
+                    <!-- Aufgabe 6: Währungsumrechnung - Kauf -->
+                    <div class="border-2 border-purple-300 rounded-lg p-4 bg-purple-50">
+                        <p class="font-semibold mb-3">6) Die TechStart AG kauft in Deutschland bei einem Lieferanten Software-Lizenzen für 5'000 Euro. Der Lieferant stellt eine Rechnung aus. Der aktuelle Wechselkurs beträgt 1 EUR = 0.95 CHF. (Hinweis: Rechne den Betrag in CHF um!)</p>
+                        <div class="grid grid-cols-3 gap-2">
+                            <input type="text" id="bonus1-bs6-soll" class="border rounded px-3 py-2" placeholder="Soll-Konto">
+                            <input type="text" id="bonus1-bs6-haben" class="border rounded px-3 py-2" placeholder="Haben-Konto">
+                            <input type="number" id="bonus1-bs6-betrag" class="border rounded px-3 py-2" placeholder="Betrag CHF">
+                        </div>
+                    </div>
+
+                    <!-- Aufgabe 7: Währungsumrechnung - Verkauf -->
+                    <div class="border-2 border-purple-300 rounded-lg p-4 bg-purple-50">
+                        <p class="font-semibold mb-3">7) Die TechStart AG erbringt IT-Beratungsleistungen für einen französischen Kunden und stellt eine Rechnung über 8'000 Euro aus. Der aktuelle Wechselkurs beträgt 1 EUR = 0.95 CHF. (Hinweis: Rechne den Betrag in CHF um!)</p>
+                        <div class="grid grid-cols-3 gap-2">
+                            <input type="text" id="bonus1-bs7-soll" class="border rounded px-3 py-2" placeholder="Soll-Konto">
+                            <input type="text" id="bonus1-bs7-haben" class="border rounded px-3 py-2" placeholder="Haben-Konto">
+                            <input type="number" id="bonus1-bs7-betrag" class="border rounded px-3 py-2" placeholder="Betrag CHF">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="bonus1-feedback" class="mt-6"></div>
+                <button onclick="checkBonus1()" class="mt-6 bg-purple-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-purple-700 transition">
+                    Prüfen
+                </button>
+            </div>
+
+            <!-- Bonus 1 Success -->
+            <div id="bonus1-success" class="hidden bg-gradient-to-r from-orange-500 to-red-500 rounded-xl shadow-xl p-4 mb-8 text-white">
+                <div class="text-center">
+                    <div class="text-4xl mb-2">🔥</div>
+                    <h3 class="text-2xl font-bold mb-1">Profi-Bucher Badge erhalten!</h3>
+                    <p class="text-sm">Komplexe Buchungen gemeistert! Weiter zum nächsten Level 💪</p>
+                </div>
+            </div>
+
+            <!-- BONUS 2: Warenhandel -->
+            <div id="bonus-2" class="bg-white rounded-xl shadow-xl p-8 mb-8 bonus-level locked">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-blue-800 flex items-center gap-2">
+                        <span class="text-4xl">📦</span>
+                        Bonus-Level 2: Warenhandel-Meister
+                    </h2>
+                    <span class="text-blue-600 font-bold">+150 Punkte</span>
+                </div>
+
+                <div class="mb-6 bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                    <p class="font-semibold text-blue-900 mb-2">🛒 Geschäftsmodell-Erweiterung</p>
+                    <p class="text-blue-800 mb-3">Die TechStart AG erweitert ihr Geschäftsmodell! Neben den IT-Dienstleistungen verkauft das Unternehmen nun auch Hardware-Produkte und Computer-Komponenten. Das bedeutet: Waren müssen eingekauft und verkauft werden.</p>
+                    <p class="text-blue-800"><strong>Neue Konten:</strong> Für den Warenhandel verwendest du die Erfolgskonten <strong>"Warenaufwand"</strong> und <strong>"Warenertrag"</strong>.</p>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="border-2 border-blue-300 rounded-lg p-4 bg-blue-50">
+                        <p class="font-semibold mb-3">1) Die TechStart AG bestellt bei ihrem Lieferanten Hardware AG verschiedene Computer-Komponenten zum Weiterverkauf im Wert von 10'000 Franken. Der Lieferant stellt eine Rechnung aus.</p>
+                        <div class="grid grid-cols-3 gap-2">
+                            <input type="text" id="bonus2-bs1-soll" class="border rounded px-3 py-2" placeholder="Soll-Konto">
+                            <input type="text" id="bonus2-bs1-haben" class="border rounded px-3 py-2" placeholder="Haben-Konto">
+                            <input type="number" id="bonus2-bs1-betrag" class="border rounded px-3 py-2" placeholder="Betrag">
+                        </div>
+                    </div>
+
+                    <div class="border-2 border-blue-300 rounded-lg p-4 bg-blue-50">
+                        <p class="font-semibold mb-3">2) Für die Lieferung der Computer-Komponenten aus Aufgabe 1 fallen Transportkosten in Höhe von 500 Franken an. Die Transportkosten werden direkt per Bank bezahlt.</p>
+                        <div class="grid grid-cols-3 gap-2">
+                            <input type="text" id="bonus2-bs2-soll" class="border rounded px-3 py-2" placeholder="Soll-Konto">
+                            <input type="text" id="bonus2-bs2-haben" class="border rounded px-3 py-2" placeholder="Haben-Konto">
+                            <input type="number" id="bonus2-bs2-betrag" class="border rounded px-3 py-2" placeholder="Betrag">
+                        </div>
+                    </div>
+
+                    <div class="border-2 border-blue-300 rounded-lg p-4 bg-blue-50">
+                        <p class="font-semibold mb-3">3) Erfolgreich abgeschlossener Verkauf: Die TechStart AG verkauft der Firma Meier & Co. diverse IT-Produkte für insgesamt 12'000 Franken. Dem Kunden wird eine Rechnung zugestellt.</p>
+                        <div class="grid grid-cols-3 gap-2">
+                            <input type="text" id="bonus2-bs3-soll" class="border rounded px-3 py-2" placeholder="Soll-Konto">
+                            <input type="text" id="bonus2-bs3-haben" class="border rounded px-3 py-2" placeholder="Haben-Konto">
+                            <input type="number" id="bonus2-bs3-betrag" class="border rounded px-3 py-2" placeholder="Betrag">
+                        </div>
+                    </div>
+
+                    <div class="border-2 border-blue-300 rounded-lg p-4 bg-blue-50">
+                        <p class="font-semibold mb-3">4) Bei der Warenkontrolle stellt die TechStart AG fest, dass ein Teil der gelieferten Computer-Komponenten defekt ist. Nach Rücksprache mit dem Lieferanten Hardware AG werden Waren im Wert von 1'000 Franken zurückgesandt. Der Lieferant stellt eine Gutschrift aus.</p>
+                        <div class="grid grid-cols-3 gap-2">
+                            <input type="text" id="bonus2-bs4-soll" class="border rounded px-3 py-2" placeholder="Soll-Konto">
+                            <input type="text" id="bonus2-bs4-haben" class="border rounded px-3 py-2" placeholder="Haben-Konto">
+                            <input type="number" id="bonus2-bs4-betrag" class="border rounded px-3 py-2" placeholder="Betrag">
+                        </div>
+                    </div>
+
+                    <div class="border-2 border-blue-300 rounded-lg p-4 bg-blue-50">
+                        <p class="font-semibold mb-3">5) Der Kunde Meier & Co. reklamiert, dass zwei der gelieferten Produkte nicht der Bestellung entsprechen. Die TechStart AG nimmt die Waren zurück und stellt dem Kunden eine Gutschrift über 2'000 Franken aus.</p>
+                        <div class="grid grid-cols-3 gap-2">
+                            <input type="text" id="bonus2-bs5-soll" class="border rounded px-3 py-2" placeholder="Soll-Konto">
+                            <input type="text" id="bonus2-bs5-haben" class="border rounded px-3 py-2" placeholder="Haben-Konto">
+                            <input type="number" id="bonus2-bs5-betrag" class="border rounded px-3 py-2" placeholder="Betrag">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="bonus2-feedback" class="mt-6"></div>
+                <button onclick="checkBonus2()" class="mt-6 bg-blue-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-blue-700 transition">
+                    Prüfen
+                </button>
+            </div>
+
+            <!-- Bonus 2 Success -->
+            <div id="bonus2-success" class="hidden bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl shadow-xl p-4 mb-8 text-white">
+                <div class="text-center">
+                    <div class="text-4xl mb-2">📦</div>
+                    <h3 class="text-2xl font-bold mb-1">Warenhandel-Meister Badge erhalten!</h3>
+                    <p class="text-sm">Warenhandel perfekt gemeistert! Letztes Level wartet 🚀</p>
+                </div>
+            </div>
+
+            <!-- BONUS 3: MWST -->
+            <div id="bonus-3" class="bg-white rounded-xl shadow-xl p-8 mb-8 bonus-level locked">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-green-800 flex items-center gap-2">
+                        <span class="text-4xl">💰</span>
+                        Bonus-Level 3: MWST-Experte
+                    </h2>
+                    <span class="text-green-600 font-bold">+200 Punkte</span>
+                </div>
+
+                <div class="mb-6 bg-green-50 border-l-4 border-green-500 p-4 rounded">
+                    <p class="font-semibold text-green-900 mb-2">💼 Die Mehrwertsteuer im Griff</p>
+                    <p class="text-green-800 mb-3">Als mehrwertsteuerpflichtiges Unternehmen muss die TechStart AG bei jedem Geschäftsvorfall die Mehrwertsteuer korrekt verbuchen. Beim Einkauf bezahlst du Vorsteuer (rückforderbar), beim Verkauf schuldest du dem Staat MWST.</p>
+                    <p class="text-green-800"><strong>Verwendete Konten:</strong> <strong>"Guthaben Vorsteuer"</strong> (beim Einkauf) und <strong>"Umsatzsteuerschuld"</strong> (beim Verkauf). MWST-Satz: 8,1%</p>
+                </div>
+
+                <div class="mb-6 bg-amber-50 border-l-4 border-amber-500 p-4 rounded">
+                    <p class="font-semibold text-amber-900">💡 Wichtig: Alle Beträge sind inkl. 8,1% MWST angegeben!</p>
+                    <p class="text-amber-800 text-sm mt-2">Du musst die Beträge für deine Buchungen aufteilen: Netto = Brutto / 1.081 und MWST = Brutto - Netto</p>
+                </div>
+
+                <div class="space-y-6">
+                    <!-- Aufgabe 1: Einkauf -->
+                    <div class="border-2 border-green-300 rounded-lg p-4 bg-green-50">
+                        <p class="font-semibold mb-3">1) Die TechStart AG kauft bei der Hardware AG Computer-Komponenten zum Weiterverkauf ein. Der Bruttobetrag inkl. 8,1% MWST beträgt 1'081 Franken und wird sofort bar bezahlt. Verbuche sowohl den Warenaufwand (netto) als auch die Vorsteuer separat.</p>
+                        <div class="mb-3">
+                            <label class="text-sm text-gray-600 font-semibold">Buchung 1 (Warenaufwand netto):</label>
+                            <div class="grid grid-cols-3 gap-2 mt-1">
+                                <input type="text" id="bonus3-bs1a-soll" class="border rounded px-3 py-2" placeholder="Soll-Konto">
+                                <input type="text" id="bonus3-bs1a-haben" class="border rounded px-3 py-2" placeholder="Haben-Konto">
+                                <input type="number" id="bonus3-bs1a-betrag" class="border rounded px-3 py-2" placeholder="Betrag">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-sm text-gray-600 font-semibold">Buchung 2 (Vorsteuer):</label>
+                            <div class="grid grid-cols-3 gap-2 mt-1">
+                                <input type="text" id="bonus3-bs1b-soll" class="border rounded px-3 py-2" placeholder="Soll-Konto">
+                                <input type="text" id="bonus3-bs1b-haben" class="border rounded px-3 py-2" placeholder="(gleich)">
+                                <input type="number" id="bonus3-bs1b-betrag" class="border rounded px-3 py-2" placeholder="Betrag">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Aufgabe 2: Verkauf -->
+                    <div class="border-2 border-green-300 rounded-lg p-4 bg-green-50">
+                        <p class="font-semibold mb-3">2) Die TechStart AG verkauft IT-Equipment. Der Bruttobetrag inkl. 8,1% MWST beträgt 2'162 Franken. Die Rechnung wird dem Kunden zugestellt (noch keine Zahlung). Verbuche sowohl den Warenertrag (netto) als auch die geschuldete MWST separat.</p>
+                        <div class="mb-3">
+                            <label class="text-sm text-gray-600 font-semibold">Buchung 1 (Warenertrag netto):</label>
+                            <div class="grid grid-cols-3 gap-2 mt-1">
+                                <input type="text" id="bonus3-bs2a-soll" class="border rounded px-3 py-2" placeholder="Soll-Konto">
+                                <input type="text" id="bonus3-bs2a-haben" class="border rounded px-3 py-2" placeholder="Haben-Konto">
+                                <input type="number" id="bonus3-bs2a-betrag" class="border rounded px-3 py-2" placeholder="Betrag">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-sm text-gray-600 font-semibold">Buchung 2 (Umsatzsteuerschuld):</label>
+                            <div class="grid grid-cols-3 gap-2 mt-1">
+                                <input type="text" id="bonus3-bs2b-soll" class="border rounded px-3 py-2" placeholder="(gleich)">
+                                <input type="text" id="bonus3-bs2b-haben" class="border rounded px-3 py-2" placeholder="Haben-Konto">
+                                <input type="number" id="bonus3-bs2b-betrag" class="border rounded px-3 py-2" placeholder="Betrag">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Aufgabe 3: Skonto -->
+                    <div class="border-2 border-green-300 rounded-lg p-4 bg-green-50">
+                        <p class="font-semibold mb-3">3) Der Kunde aus Aufgabe 2 bezahlt die Rechnung innerhalb der Skontofrist und erhält 2% Skonto auf den Bruttobetrag (2'162). Verbuche: Anpassung Warenertrag, Anpassung Umsatzsteuerschuld, Zahlung auf Bank. (Hinweis: Runde auf ganze Zahlen!)</p>
+                        <div class="mb-3">
+                            <label class="text-sm text-gray-600 font-semibold">Buchung 1 (Anpassung Warenertrag):</label>
+                            <div class="grid grid-cols-3 gap-2 mt-1">
+                                <input type="text" id="bonus3-bs3a-soll" class="border rounded px-3 py-2" placeholder="Soll-Konto">
+                                <input type="text" id="bonus3-bs3a-haben" class="border rounded px-3 py-2" placeholder="Haben-Konto">
+                                <input type="number" id="bonus3-bs3a-betrag" class="border rounded px-3 py-2" placeholder="Betrag">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="text-sm text-gray-600 font-semibold">Buchung 2 (Anpassung Umsatzsteuerschuld):</label>
+                            <div class="grid grid-cols-3 gap-2 mt-1">
+                                <input type="text" id="bonus3-bs3b-soll" class="border rounded px-3 py-2" placeholder="Soll-Konto">
+                                <input type="text" id="bonus3-bs3b-haben" class="border rounded px-3 py-2" placeholder="Haben-Konto">
+                                <input type="number" id="bonus3-bs3b-betrag" class="border rounded px-3 py-2" placeholder="Betrag">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-sm text-gray-600 font-semibold">Buchung 3 (Zahlung auf Bank):</label>
+                            <div class="grid grid-cols-3 gap-2 mt-1">
+                                <input type="text" id="bonus3-bs3c-soll" class="border rounded px-3 py-2" placeholder="Soll-Konto">
+                                <input type="text" id="bonus3-bs3c-haben" class="border rounded px-3 py-2" placeholder="Haben-Konto">
+                                <input type="number" id="bonus3-bs3c-betrag" class="border rounded px-3 py-2" placeholder="Betrag">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Aufgabe 4: Kontenführung + Abrechnung -->
+                    <div class="border-2 border-green-300 rounded-lg p-4 bg-green-50">
+                        <p class="font-semibold mb-4">4) Rechne mit dem Steueramt ab und führe dann die Konten.</p>
+                        
+                        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4 rounded">
+                            <p class="font-semibold text-blue-900 mb-2">Zuerst die Abrechnung mit dem Steueramt:</p>
+                            <p class="text-blue-800 text-sm">Verbuche die Verrechnung der beiden Konten und dann die Überweisung ans Steueramt.</p>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="text-sm text-gray-600 font-semibold">Buchung 1 (Verrechnung Vorsteuer mit Umsatzsteuerschuld):</label>
+                            <div class="grid grid-cols-3 gap-2 mt-1">
+                                <input type="text" id="bonus3-bs4a-soll" class="border rounded px-3 py-2" placeholder="Soll-Konto">
+                                <input type="text" id="bonus3-bs4a-haben" class="border rounded px-3 py-2" placeholder="Haben-Konto">
+                                <input type="number" id="bonus3-bs4a-betrag" class="border rounded px-3 py-2" placeholder="Betrag">
+                            </div>
+                        </div>
+                        <div class="mb-6">
+                            <label class="text-sm text-gray-600 font-semibold">Buchung 2 (Überweisung ans Steueramt):</label>
+                            <div class="grid grid-cols-3 gap-2 mt-1">
+                                <input type="text" id="bonus3-bs4b-soll" class="border rounded px-3 py-2" placeholder="Soll-Konto">
+                                <input type="text" id="bonus3-bs4b-haben" class="border rounded px-3 py-2" placeholder="Haben-Konto">
+                                <input type="number" id="bonus3-bs4b-betrag" class="border rounded px-3 py-2" placeholder="Betrag">
+                            </div>
+                        </div>
+
+                        <div class="bg-amber-50 border-l-4 border-amber-500 p-4 mb-4 rounded">
+                            <p class="font-semibold text-amber-900 mb-2">Jetzt die Kontenführung:</p>
+                            <p class="text-amber-800 text-sm">Führe die beiden Konten mit allen Geschäftsfällen inkl. der obigen Buchungen.</p>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-6 mb-4">
+                            <!-- Guthaben Vorsteuer -->
+                            <div class="border-2 border-green-400 rounded-lg p-4 bg-white">
+                                <h4 class="font-bold text-center mb-3 bg-green-600 text-white p-2 rounded">Guthaben Vorsteuer</h4>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <div class="text-xs text-gray-600 mb-2">Soll</div>
+                                        <div class="space-y-2">
+                                            <input type="number" id="vorsteuer-soll-1" class="w-full border rounded px-2 py-1 text-sm" placeholder="1) Betrag">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs text-gray-600 mb-2">Haben</div>
+                                        <div class="space-y-2">
+                                            <input type="number" id="vorsteuer-haben-1" class="w-full border rounded px-2 py-1 text-sm" placeholder="4) Verrechnung">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Umsatzsteuerschuld -->
+                            <div class="border-2 border-green-400 rounded-lg p-4 bg-white">
+                                <h4 class="font-bold text-center mb-3 bg-green-600 text-white p-2 rounded">Umsatzsteuerschuld</h4>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <div class="text-xs text-gray-600 mb-2">Soll</div>
+                                        <div class="space-y-2">
+                                            <input type="number" id="mwst-soll-1" class="w-full border rounded px-2 py-1 text-sm" placeholder="3) Betrag">
+                                            <input type="number" id="mwst-soll-2" class="w-full border rounded px-2 py-1 text-sm" placeholder="4) Verrechnung">
+                                            <input type="number" id="mwst-soll-3" class="w-full border rounded px-2 py-1 text-sm" placeholder="4) Überweisung">
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs text-gray-600 mb-2">Haben</div>
+                                        <div class="space-y-2">
+                                            <input type="number" id="mwst-haben-1" class="w-full border rounded px-2 py-1 text-sm" placeholder="2) Betrag">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="bonus3-feedback" class="mt-6"></div>
+                <button onclick="checkBonus3()" class="mt-6 bg-green-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-green-700 transition">
+                    Prüfen
+                </button>
+            </div>
+        </div>
+
+        <!-- Final Success -->
+        <div id="final-success" class="hidden bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 rounded-xl shadow-xl p-6 text-white text-center">
+            <div class="text-5xl mb-3">👑</div>
+            <h2 class="text-4xl font-bold mb-3">CHAMPION!</h2>
+            <p class="text-2xl mb-4">Du hast ALLE Challenges gemeistert!</p>
+            <div class="grid grid-cols-4 gap-3 max-w-2xl mx-auto">
+                <div class="bg-white/20 rounded-lg p-3">
+                    <div class="text-3xl mb-1">🎓</div>
+                    <div class="text-xs">Grundlagen-Meister</div>
+                </div>
+                <div class="bg-white/20 rounded-lg p-3">
+                    <div class="text-3xl mb-1">🔥</div>
+                    <div class="text-xs">Profi-Bucher</div>
+                </div>
+                <div class="bg-white/20 rounded-lg p-3">
+                    <div class="text-3xl mb-1">📦</div>
+                    <div class="text-xs">Warenhandel-Meister</div>
+                </div>
+                <div class="bg-white/20 rounded-lg p-3">
+                    <div class="text-3xl mb-1">💰</div>
+                    <div class="text-xs">MWST-Experte</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let gameState = {
+            points: 0,
+            correct: 0,
+            errors: 0,
+            completedSteps: [],
+            earnedBadges: [],
+            attempts: {} // Track attempts per step
+        };
+
+        const solutions = {
+            step2: [
+                { soll: 'fll', haben: 'dienstleistungsertrag', betrag: 5000 },
+                { soll: 'verwaltungsaufwand', haben: 'kasse', betrag: 3000 },
+                { soll: 'lohnaufwand', haben: 'bank', betrag: 6000 },
+                { soll: 'vll', haben: 'bank', betrag: 4000 },
+                { soll: 'bank', haben: 'fll', betrag: 7000 },
+                { soll: 'darlehensschuld', haben: 'bank', betrag: 3000 }
+            ],
+            step3: {
+                ab: {
+                    'mobiliar-ab': 10000,
+                    'vll-ab': 8000
+                },
+                buchungen: {
+                    'bank-haben-3': 6000,
+                    'fll-soll-1': 5000,
+                    'verwaltungsaufwand-soll-2': 3000
+                },
+                saldo: {
+                    'saldo-kasse': 5000,
+                    'saldo-bank': 24000,
+                    'saldo-fll': 10000,
+                    'saldo-mobiliar': 10000,
+                    'saldo-vll': 4000,
+                    'saldo-darlehensschuld': 12000,
+                    'saldo-verwaltungsaufwand': 3000,
+                    'saldo-dienstleistungsertrag': 5000,
+                    'saldo-lohnaufwand': 6000
+                },
+                totale: {
+                    'kasse-soll-total': 8000, 'kasse-haben-total': 8000,
+                    'bank-soll-total': 37000, 'bank-haben-total': 37000,
+                    'fll-soll-total': 17000, 'fll-haben-total': 17000,
+                    'mobiliar-soll-total': 10000, 'mobiliar-haben-total': 10000,
+                    'vll-soll-total': 8000, 'vll-haben-total': 8000,
+                    'darlehensschuld-soll-total': 15000, 'darlehensschuld-haben-total': 15000,
+                    'dienstleistungsertrag-soll-total': 5000, 'dienstleistungsertrag-haben-total': 5000,
+                    'verwaltungsaufwand-soll-total': 3000, 'verwaltungsaufwand-haben-total': 3000,
+                    'lohnaufwand-soll-total': 6000, 'lohnaufwand-haben-total': 6000
+                }
+            },
+            step4: { 
+                'er-verwaltungsaufwand': 3000,
+                'er-personalaufwand': 6000,
+                'er-total-aufwand': 9000,
+                'er-dienstleistungsertrag': 5000,
+                'er-total-ertrag': 5000,
+                'gewinn-verlust': 4000, 
+                'gewinn-verlust-typ': 'verlust' 
+            },
+            step5: {
+                'sb-kasse': 5000, 'sb-bank': 24000, 'sb-fll': 10000, 'sb-mobiliar': 10000,
+                'sb-total-aktiven': 49000, 'sb-vll': 4000, 'sb-darlehensschuld': 12000,
+                'sb-eigenkapital': 33000, 'sb-total-passiven': 49000
+            },
+            bonus1: [
+                // Aufgabe 1: Rabatt FLL (20'000 - 10% = 18'000)
+                { soll: 'fll', haben: 'dienstleistungsertrag', betrag: 18000 },
+                // Aufgabe 2a: Skonto = Korrektur Dienstleistungsertrag (18'000 * 2% = 360)
+                { soll: 'dienstleistungsertrag', haben: 'fll', betrag: 360 },
+                // Aufgabe 2b: Zahlung FLL (18'000 - 360 = 17'640)
+                { soll: 'bank', haben: 'fll', betrag: 17640 },
+                // Aufgabe 3: Rabatt-Gutschrift VLL für IT-Anlagen (15'000 * 5% = 750)
+                { soll: 'vll', haben: 'itanlagen', betrag: 750 },
+                // Aufgabe 4a: Rechnung VLL mit Rabatt - Verbrauchsmaterial (2'000 - 10% = 1'800)
+                { soll: 'verwaltungsaufwand', haben: 'vll', betrag: 1800 },
+                // Aufgabe 4b: Skonto = Korrektur Verwaltungsaufwand (1'800 * 3% = 54)
+                { soll: 'vll', haben: 'verwaltungsaufwand', betrag: 54 },
+                // Aufgabe 4c: Zahlung VLL (1'800 - 54 = 1'746)
+                { soll: 'vll', haben: 'bank', betrag: 1746 },
+                // Aufgabe 5: Teilrückzahlung Darlehen (12'000 * 20% = 2'400)
+                { soll: 'darlehensschuld', haben: 'bank', betrag: 2400 },
+                // Aufgabe 6: Währung Kauf IT-Anlagen (5'000 EUR * 0.95 = 4'750 CHF)
+                { soll: 'itanlagen', haben: 'vll', betrag: 4750 },
+                // Aufgabe 7: Währung Verkauf (8'000 EUR * 0.95 = 7'600 CHF)
+                { soll: 'fll', haben: 'dienstleistungsertrag', betrag: 7600 }
+            ],
+            bonus2: [
+                { soll: 'warenaufwand', haben: 'vll', betrag: 10000 },
+                { soll: 'warenaufwand', haben: 'bank', betrag: 500 },
+                { soll: 'fll', haben: 'warenertrag', betrag: 12000 },
+                { soll: 'vll', haben: 'warenaufwand', betrag: 1000 },
+                { soll: 'warenertrag', haben: 'fll', betrag: 2000 }
+            ],
+            bonus3: {
+                buchungen: [
+                    // Aufgabe 1: Einkauf (1'081 brutto = 1'000 netto + 81 MWST)
+                    { soll: 'warenaufwand', haben: 'kasse', betrag: 1000 },
+                    { soll: 'guthabenvorsteuer', haben: 'kasse', betrag: 81 },
+                    // Aufgabe 2: Verkauf auf Rechnung (2'162 brutto = 2'000 netto + 162 MWST)
+                    { soll: 'fll', haben: 'warenertrag', betrag: 2000 },
+                    { soll: 'fll', haben: 'umsatzsteuerschuld', betrag: 162 },
+                    // Aufgabe 3: Skonto 2% auf 2'162 brutto = 43 (40 netto + 3 MWST), Zahlung 2'119
+                    { soll: 'warenertrag', haben: 'fll', betrag: 40 },
+                    { soll: 'umsatzsteuerschuld', haben: 'fll', betrag: 3 },
+                    { soll: 'bank', haben: 'fll', betrag: 2119 },
+                    // Aufgabe 4: Verrechnung + Überweisung (Vorsteuer 81, Umsatzsteuer 159, Zahllast 78)
+                    { soll: 'umsatzsteuerschuld', haben: 'guthabenvorsteuer', betrag: 81 },
+                    { soll: 'umsatzsteuerschuld', haben: 'bank', betrag: 78 }
+                ],
+                konten: {
+                    // Guthaben Vorsteuer: Soll 81 / Haben 81 (Verrechnung)
+                    'vorsteuer-soll-1': 81,
+                    'vorsteuer-haben-1': 81,
+                    // Umsatzsteuerschuld: Soll 3+81+78=162 / Haben 162
+                    'mwst-soll-1': 3,
+                    'mwst-soll-2': 81,
+                    'mwst-soll-3': 78,
+                    'mwst-haben-1': 162
+                }
+            }
+        };
+
+        function updateDisplay() {
+            document.getElementById('correct').textContent = gameState.correct;
+            document.getElementById('errors').textContent = gameState.errors;
+            
+            // Fortschrittsbalken: Grundlagen = 40%, Bonus = 60%
+            const mainSteps = 5;
+            const totalBonusLevels = 3;
+            
+            let progress = 0;
+            const completedMainSteps = gameState.completedSteps.filter(s => s <= mainSteps).length;
+            progress += (completedMainSteps / mainSteps) * 40; // Grundlagen: max 40%
+            
+            // Bonus-Levels: Bonus1=25%, Bonus2=10%, Bonus3=25%
+            if (gameState.completedSteps.includes(6)) progress += 25; // Bonus 1
+            if (gameState.completedSteps.includes(7)) progress += 10; // Bonus 2
+            if (gameState.completedSteps.includes(8)) progress += 25; // Bonus 3
+            
+            document.getElementById('progress-bar').style.width = progress + '%';
+            document.getElementById('progress-text').textContent = Math.round(progress) + '%';
+        }
+
+        function unlockStep(step) {
+            document.getElementById('step-' + step).classList.remove('locked');
+            document.getElementById('step-' + step).scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function showFeedback(stepId, success, message) {
+            const feedbackDiv = document.getElementById(stepId + '-feedback');
+            if (success) {
+                feedbackDiv.innerHTML = `<div class="bg-green-100 border-l-4 border-green-500 p-4 rounded pulse-green">
+                    <p class="font-bold text-green-900">✅ ${message}</p>
+                </div>`;
+            } else {
+                feedbackDiv.innerHTML = `<div class="bg-red-100 border-l-4 border-red-500 p-4 rounded shake">
+                    <p class="font-bold text-red-900">❌ ${message}</p>
+                </div>`;
+            }
+        }
+
+        function awardBadge(badgeId, badgeName) {
+            const badge = document.getElementById('badge-' + badgeId);
+            badge.classList.remove('opacity-30');
+            badge.classList.add('badge-glow', 'border-4', 'border-yellow-400');
+            gameState.earnedBadges.push(badgeId);
+            // Kein Scroll mehr - Badge leuchtet in oberer Leiste
+        }
+
+        function normalizeText(text) {
+            return text.toLowerCase().trim().replace(/\s+/g, '').replace(/ä/g, 'a').replace(/ö/g, 'o').replace(/ü/g, 'u');
+        }
+
+        function checkStep2() {
+            // Initialize attempts if not exists
+            if (!gameState.attempts['step2']) {
+                gameState.attempts['step2'] = 0;
+            }
+            gameState.attempts['step2']++;
+            
+            let correctCount = 0;
+            for (let i = 0; i < 6; i++) {
+                const num = i + 1;
+                const sollInput = document.getElementById(`bs${num}-soll`);
+                const habenInput = document.getElementById(`bs${num}-haben`);
+                const betragInput = document.getElementById(`bs${num}-betrag`);
+
+                const userSoll = normalizeText(sollInput.value);
+                const userHaben = normalizeText(habenInput.value);
+                const userBetrag = parseInt(betragInput.value);
+
+                const solution = solutions.step2[i];
+                const correctSoll = normalizeText(solution.soll);
+                const correctHaben = normalizeText(solution.haben);
+                
+                // Akzeptiere auch alternative Begriffe
+                const sollMatches = (userSoll === correctSoll) || 
+                                   (correctSoll === 'lohnaufwand' && userSoll === 'personalaufwand') ||
+                                   (correctSoll === 'personalaufwand' && userSoll === 'lohnaufwand') ||
+                                   (correctSoll === 'verwaltungsaufwand' && userSoll === 'buromaterialaufwand') ||
+                                   (correctSoll === 'verwaltungsaufwand' && userSoll === 'buroaufwand');
+                const habenMatches = (userHaben === correctHaben) ||
+                                    (correctHaben === 'dienstleistungsertrag' && userHaben === 'honorarertrag') ||
+                                    (correctHaben === 'honorarertrag' && userHaben === 'dienstleistungsertrag');
+
+                if (sollMatches && habenMatches && userBetrag === solution.betrag) {
+                    sollInput.classList.add('border-green-500', 'bg-green-50');
+                    habenInput.classList.add('border-green-500', 'bg-green-50');
+                    betragInput.classList.add('border-green-500', 'bg-green-50');
+                    correctCount++;
+                } else {
+                    sollInput.classList.add('border-red-500', 'shake');
+                    habenInput.classList.add('border-red-500', 'shake');
+                    betragInput.classList.add('border-red-500', 'shake');
+                }
+            }
+
+            if (correctCount === 6) {
+                // Bonus points for first attempt
+                const basePoints = 150;
+                const bonusPoints = gameState.attempts['step2'] === 1 ? 50 : 0;
+                const totalPoints = basePoints + bonusPoints;
+                
+                gameState.points += totalPoints;
+                gameState.correct++;
+                gameState.completedSteps.push(2);
+                updateDisplay();
+                
+                const message = bonusPoints > 0 
+                    ? `Perfekt! Alle Buchungssätze korrekt im ersten Versuch! 🎉`
+                    : `Perfekt! Alle Buchungssätze korrekt.`;
+                showFeedback('step2', true, message);
+                setTimeout(() => unlockStep(3), 1500);
+            } else {
+                gameState.errors++;
+                updateDisplay();
+                showFeedback('step2', false, `${correctCount} von 6 korrekt. Überprüfe die markierten Felder!`);
+            }
+        }
+
+        function checkStep3() {
+            // Initialize attempts if not exists
+            if (!gameState.attempts['step3']) {
+                gameState.attempts['step3'] = 0;
+            }
+            gameState.attempts['step3']++;
+            
+            let basisCorrect = true;
+            
+            // Check AB (2 Felder)
+            for (const [id, value] of Object.entries(solutions.step3.ab)) {
+                const input = document.getElementById(id);
+                if (!input) continue;
+                const userValue = parseInt(input.value);
+                if (userValue === value) {
+                    input.classList.add('border-green-500', 'bg-green-50');
+                } else {
+                    input.classList.add('border-red-500', 'shake');
+                    basisCorrect = false;
+                }
+            }
+
+            // Check Buchungen (3 Felder)
+            for (const [id, value] of Object.entries(solutions.step3.buchungen)) {
+                const input = document.getElementById(id);
+                if (!input) continue;
+                const userValue = parseInt(input.value);
+                if (userValue === value) {
+                    input.classList.add('border-green-500', 'bg-green-50');
+                } else {
+                    input.classList.add('border-red-500', 'shake');
+                    basisCorrect = false;
+                }
+            }
+
+            // Check nur die 4 gelb markierten Salden
+            const saldenZuPruefen = ['saldo-kasse', 'saldo-vll', 'saldo-verwaltungsaufwand', 'saldo-dienstleistungsertrag'];
+            for (const id of saldenZuPruefen) {
+                const input = document.getElementById(id);
+                if (!input) continue;
+                const userValue = parseInt(input.value);
+                const correctValue = solutions.step3.saldo[id];
+                if (userValue === correctValue) {
+                    input.classList.add('border-green-500', 'bg-green-50');
+                } else {
+                    input.classList.add('border-red-500', 'shake');
+                    basisCorrect = false;
+                }
+            }
+
+            // Wenn alle 9 Basisfelder korrekt sind
+            if (basisCorrect) {
+                // Zeige und fülle alle Total-Felder automatisch aus
+                for (const [id, value] of Object.entries(solutions.step3.totale)) {
+                    const input = document.getElementById(id);
+                    if (input) {
+                        input.classList.remove('hidden');
+                        input.value = value;
+                        input.readOnly = true;
+                        input.classList.add('bg-gray-100', 'text-gray-700');
+                    }
+                }
+                
+                // Fülle auch die restlichen Salden automatisch aus
+                const restlicheSalden = ['saldo-bank', 'saldo-fll', 'saldo-mobiliar', 'saldo-darlehensschuld', 'saldo-lohnaufwand'];
+                for (const id of restlicheSalden) {
+                    const input = document.getElementById(id);
+                    if (input && !input.value) {
+                        input.value = solutions.step3.saldo[id];
+                        input.readOnly = true;
+                        input.classList.add('bg-gray-100', 'text-gray-700');
+                    }
+                }
+                
+                // Bonus points for first attempt
+                const basePoints = 200;
+                const bonusPoints = gameState.attempts['step3'] === 1 ? 50 : 0;
+                const totalPoints = basePoints + bonusPoints;
+                
+                gameState.points += totalPoints;
+                gameState.correct++;
+                gameState.completedSteps.push(3);
+                updateDisplay();
+                
+                const message = bonusPoints > 0 
+                    ? `Exzellent! Kontenführung perfekt im ersten Versuch! Die Totale und restlichen Salden wurden automatisch berechnet. 🎉`
+                    : `Exzellent! Kontenführung perfekt. Die Totale und restlichen Salden wurden automatisch berechnet.`;
+                showFeedback('step3', true, message);
+                setTimeout(() => unlockStep(4), 1500);
+            } else {
+                gameState.errors++;
+                updateDisplay();
+                showFeedback('step3', false, 'Überprüfe die rot markierten Felder! Hinweis: AB aus Bilanz ablesen, Beträge aus Geschäftsfällen nehmen.');
+            }
+        }
+
+        function checkStep4() {
+            // Initialize attempts if not exists
+            if (!gameState.attempts['step4']) {
+                gameState.attempts['step4'] = 0;
+            }
+            gameState.attempts['step4']++;
+            
+            let allCorrect = true;
+            
+            // Check alle ER Felder
+            const erFields = ['er-verwaltungsaufwand', 'er-personalaufwand', 'er-total-aufwand', 'er-dienstleistungsertrag', 'er-total-ertrag'];
+            for (const id of erFields) {
+                const input = document.getElementById(id);
+                const userValue = parseInt(input.value);
+                const correctValue = solutions.step4[id];
+                
+                if (userValue === correctValue) {
+                    input.classList.add('border-green-500', 'bg-green-50');
+                } else {
+                    input.classList.add('border-red-500', 'shake');
+                    allCorrect = false;
+                }
+            }
+            
+            // Check Gewinn/Verlust
+            const betrag = parseInt(document.getElementById('gewinn-verlust').value);
+            const typ = document.getElementById('gewinn-verlust-typ').value;
+
+            if (betrag === solutions.step4['gewinn-verlust'] && typ === solutions.step4['gewinn-verlust-typ']) {
+                document.getElementById('gewinn-verlust').classList.add('border-green-500', 'bg-green-50');
+                document.getElementById('gewinn-verlust-typ').classList.add('border-green-500', 'bg-green-50');
+            } else {
+                document.getElementById('gewinn-verlust').classList.add('border-red-500', 'shake');
+                document.getElementById('gewinn-verlust-typ').classList.add('border-red-500', 'shake');
+                allCorrect = false;
+            }
+
+            if (allCorrect) {
+                // Bonus points for first attempt
+                const basePoints = 100;
+                const bonusPoints = gameState.attempts['step4'] === 1 ? 50 : 0;
+                const totalPoints = basePoints + bonusPoints;
+                
+                gameState.points += totalPoints;
+                gameState.correct++;
+                gameState.completedSteps.push(4);
+                updateDisplay();
+                
+                const message = bonusPoints > 0 
+                    ? `Richtig! Erfolgsrechnung korrekt im ersten Versuch! Verlust von 4'000. 🎉`
+                    : `Richtig! Erfolgsrechnung korrekt. Verlust von 4'000.`;
+                showFeedback('step4', true, message);
+                setTimeout(() => unlockStep(5), 1500);
+            } else {
+                gameState.errors++;
+                updateDisplay();
+                showFeedback('step4', false, 'Überprüfe die Beträge. Tipp: Übertrage die Salden aus Schritt 3!');
+            }
+        }
+
+        function checkStep5() {
+            // Initialize attempts if not exists
+            if (!gameState.attempts['step5']) {
+                gameState.attempts['step5'] = 0;
+            }
+            gameState.attempts['step5']++;
+            
+            let allCorrect = true;
+            for (const [id, value] of Object.entries(solutions.step5)) {
+                const input = document.getElementById(id);
+                const userValue = parseInt(input.value);
+                if (userValue === value) {
+                    input.classList.add('border-green-500', 'bg-green-50');
+                } else {
+                    input.classList.add('border-red-500', 'shake');
+                    allCorrect = false;
+                }
+            }
+
+            if (allCorrect) {
+                // Bonus points for first attempt
+                const basePoints = 150;
+                const bonusPoints = gameState.attempts['step5'] === 1 ? 50 : 0;
+                const totalPoints = basePoints + bonusPoints;
+                
+                gameState.points += totalPoints;
+                gameState.correct++;
+                gameState.completedSteps.push(5);
+                updateDisplay();
+                awardBadge('grundlagen', 'Grundlagen-Meister');
+                
+                const message = bonusPoints > 0 
+                    ? `Fantastisch! Schlussbilanz perfekt im ersten Versuch! 🎉`
+                    : `Fantastisch! Schlussbilanz perfekt.`;
+                showFeedback('step5', true, message);
+                
+                setTimeout(() => {
+                    document.getElementById('hauptchallenge-success').classList.remove('hidden');
+                    document.getElementById('hauptchallenge-success').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    
+                    // Bonus-Section UND Bonus 1 sofort freischalten (aber noch nicht scrollen)
+                    document.getElementById('bonus-section').classList.remove('hidden');
+                    document.getElementById('bonus-1').classList.remove('locked');
+                    document.getElementById('bonus-1').classList.add('unlocked');
+                    
+                    // Story Popup nach 2 Sekunden
+                    setTimeout(() => {
+                        clearTimeout(currentTimer);
+                        showStoryPopup('grundlagen_success');
+                        startLevelTimer('bonus1');
+                    }, 2000);
+                }, 1500);
+            } else {
+                gameState.errors++;
+                updateDisplay();
+                showFeedback('step5', false, 'Hast du den Verlust mit dem Eigenkapital verrechnet?');
+            }
+        }
+
+        function checkBonus1() {
+            let correctCount = 0;
+            const totalBuchungen = 10;
+            
+            // Reset alle Felder
+            document.querySelectorAll('#bonus-1 input').forEach(input => {
+                input.classList.remove('border-green-500', 'bg-green-50', 'border-red-500', 'shake');
+            });
+            
+            // Aufgabe 1: Rabatt FLL
+            const bs1_correct = normalizeText(document.getElementById('bonus1-bs1-soll').value) === 'fll' &&
+                (normalizeText(document.getElementById('bonus1-bs1-haben').value) === 'dienstleistungsertrag' ||
+                 normalizeText(document.getElementById('bonus1-bs1-haben').value) === 'honorarertrag') &&
+                parseInt(document.getElementById('bonus1-bs1-betrag').value) === 18000;
+            
+            if (bs1_correct) {
+                correctCount++;
+                ['bonus1-bs1-soll', 'bonus1-bs1-haben', 'bonus1-bs1-betrag'].forEach(id => {
+                    document.getElementById(id).classList.add('border-green-500', 'bg-green-50');
+                });
+            } else {
+                ['bonus1-bs1-soll', 'bonus1-bs1-haben', 'bonus1-bs1-betrag'].forEach(id => {
+                    document.getElementById(id).classList.add('border-red-500', 'shake');
+                });
+            }
+            
+            // Aufgabe 2a: Skonto = Korrektur Dienstleistungsertrag
+            const bs2a_correct = (normalizeText(document.getElementById('bonus1-bs2a-soll').value) === 'dienstleistungsertrag' ||
+                 normalizeText(document.getElementById('bonus1-bs2a-soll').value) === 'honorarertrag') &&
+                normalizeText(document.getElementById('bonus1-bs2a-haben').value) === 'fll' &&
+                parseInt(document.getElementById('bonus1-bs2a-betrag').value) === 360;
+            
+            if (bs2a_correct) {
+                correctCount++;
+                ['bonus1-bs2a-soll', 'bonus1-bs2a-haben', 'bonus1-bs2a-betrag'].forEach(id => {
+                    document.getElementById(id).classList.add('border-green-500', 'bg-green-50');
+                });
+            } else {
+                ['bonus1-bs2a-soll', 'bonus1-bs2a-haben', 'bonus1-bs2a-betrag'].forEach(id => {
+                    document.getElementById(id).classList.add('border-red-500', 'shake');
+                });
+            }
+            
+            // Aufgabe 2b: Zahlung FLL
+            const bs2b_correct = normalizeText(document.getElementById('bonus1-bs2b-soll').value) === 'bank' &&
+                normalizeText(document.getElementById('bonus1-bs2b-haben').value) === 'fll' &&
+                parseInt(document.getElementById('bonus1-bs2b-betrag').value) === 17640;
+            
+            if (bs2b_correct) {
+                correctCount++;
+                ['bonus1-bs2b-soll', 'bonus1-bs2b-haben', 'bonus1-bs2b-betrag'].forEach(id => {
+                    document.getElementById(id).classList.add('border-green-500', 'bg-green-50');
+                });
+            } else {
+                ['bonus1-bs2b-soll', 'bonus1-bs2b-haben', 'bonus1-bs2b-betrag'].forEach(id => {
+                    document.getElementById(id).classList.add('border-red-500', 'shake');
+                });
+            }
+            
+            // Aufgabe 3: Rabatt-Gutschrift VLL für IT-Anlagen
+            const bs3_correct = (normalizeText(document.getElementById('bonus1-bs3-soll').value) === 'vll' ||
+                 normalizeText(document.getElementById('bonus1-bs3-soll').value) === 'kreditoren') &&
+                (normalizeText(document.getElementById('bonus1-bs3-haben').value) === 'itanlagen' ||
+                 normalizeText(document.getElementById('bonus1-bs3-haben').value) === 'it-anlagen' ||
+                 normalizeText(document.getElementById('bonus1-bs3-haben').value) === 'itinfrastruktur') &&
+                parseInt(document.getElementById('bonus1-bs3-betrag').value) === 750;
+            
+            if (bs3_correct) {
+                correctCount++;
+                ['bonus1-bs3-soll', 'bonus1-bs3-haben', 'bonus1-bs3-betrag'].forEach(id => {
+                    document.getElementById(id).classList.add('border-green-500', 'bg-green-50');
+                });
+            } else {
+                ['bonus1-bs3-soll', 'bonus1-bs3-haben', 'bonus1-bs3-betrag'].forEach(id => {
+                    document.getElementById(id).classList.add('border-red-500', 'shake');
+                });
+            }
+            
+            // Aufgabe 4a: Verwaltungsaufwand
+            const bs4a_correct = normalizeText(document.getElementById('bonus1-bs4a-soll').value) === 'verwaltungsaufwand' &&
+                (normalizeText(document.getElementById('bonus1-bs4a-haben').value) === 'vll' ||
+                 normalizeText(document.getElementById('bonus1-bs4a-haben').value) === 'kreditoren') &&
+                parseInt(document.getElementById('bonus1-bs4a-betrag').value) === 1800;
+            
+            if (bs4a_correct) {
+                correctCount++;
+                ['bonus1-bs4a-soll', 'bonus1-bs4a-haben', 'bonus1-bs4a-betrag'].forEach(id => {
+                    document.getElementById(id).classList.add('border-green-500', 'bg-green-50');
+                });
+            } else {
+                ['bonus1-bs4a-soll', 'bonus1-bs4a-haben', 'bonus1-bs4a-betrag'].forEach(id => {
+                    document.getElementById(id).classList.add('border-red-500', 'shake');
+                });
+            }
+            
+            // Aufgabe 4b: Skonto = Korrektur Verwaltungsaufwand
+            const bs4b_correct = (normalizeText(document.getElementById('bonus1-bs4b-soll').value) === 'vll' ||
+                 normalizeText(document.getElementById('bonus1-bs4b-soll').value) === 'kreditoren') &&
+                normalizeText(document.getElementById('bonus1-bs4b-haben').value) === 'verwaltungsaufwand' &&
+                parseInt(document.getElementById('bonus1-bs4b-betrag').value) === 54;
+            
+            if (bs4b_correct) {
+                correctCount++;
+                ['bonus1-bs4b-soll', 'bonus1-bs4b-haben', 'bonus1-bs4b-betrag'].forEach(id => {
+                    document.getElementById(id).classList.add('border-green-500', 'bg-green-50');
+                });
+            } else {
+                ['bonus1-bs4b-soll', 'bonus1-bs4b-haben', 'bonus1-bs4b-betrag'].forEach(id => {
+                    document.getElementById(id).classList.add('border-red-500', 'shake');
+                });
+            }
+            
+            // Aufgabe 4c: Zahlung VLL
+            const bs4c_correct = (normalizeText(document.getElementById('bonus1-bs4c-soll').value) === 'vll' ||
+                 normalizeText(document.getElementById('bonus1-bs4c-soll').value) === 'kreditoren') &&
+                normalizeText(document.getElementById('bonus1-bs4c-haben').value) === 'bank' &&
+                parseInt(document.getElementById('bonus1-bs4c-betrag').value) === 1746;
+            
+            if (bs4c_correct) {
+                correctCount++;
+                ['bonus1-bs4c-soll', 'bonus1-bs4c-haben', 'bonus1-bs4c-betrag'].forEach(id => {
+                    document.getElementById(id).classList.add('border-green-500', 'bg-green-50');
+                });
+            } else {
+                ['bonus1-bs4c-soll', 'bonus1-bs4c-haben', 'bonus1-bs4c-betrag'].forEach(id => {
+                    document.getElementById(id).classList.add('border-red-500', 'shake');
+                });
+            }
+            
+            // Aufgabe 5: Darlehen
+            const bs5_correct = normalizeText(document.getElementById('bonus1-bs5-soll').value) === 'darlehensschuld' &&
+                normalizeText(document.getElementById('bonus1-bs5-haben').value) === 'bank' &&
+                parseInt(document.getElementById('bonus1-bs5-betrag').value) === 2400;
+            
+            if (bs5_correct) {
+                correctCount++;
+                ['bonus1-bs5-soll', 'bonus1-bs5-haben', 'bonus1-bs5-betrag'].forEach(id => {
+                    document.getElementById(id).classList.add('border-green-500', 'bg-green-50');
+                });
+            } else {
+                ['bonus1-bs5-soll', 'bonus1-bs5-haben', 'bonus1-bs5-betrag'].forEach(id => {
+                    document.getElementById(id).classList.add('border-red-500', 'shake');
+                });
+            }
+            
+            // Aufgabe 6: Währung Kauf
+            const bs6_correct = (normalizeText(document.getElementById('bonus1-bs6-soll').value) === 'itanlagen' ||
+                 normalizeText(document.getElementById('bonus1-bs6-soll').value) === 'it-anlagen' ||
+                 normalizeText(document.getElementById('bonus1-bs6-soll').value) === 'itinfrastruktur') &&
+                (normalizeText(document.getElementById('bonus1-bs6-haben').value) === 'vll' ||
+                 normalizeText(document.getElementById('bonus1-bs6-haben').value) === 'kreditoren') &&
+                parseInt(document.getElementById('bonus1-bs6-betrag').value) === 4750;
+            
+            if (bs6_correct) {
+                correctCount++;
+                ['bonus1-bs6-soll', 'bonus1-bs6-haben', 'bonus1-bs6-betrag'].forEach(id => {
+                    document.getElementById(id).classList.add('border-green-500', 'bg-green-50');
+                });
+            } else {
+                ['bonus1-bs6-soll', 'bonus1-bs6-haben', 'bonus1-bs6-betrag'].forEach(id => {
+                    document.getElementById(id).classList.add('border-red-500', 'shake');
+                });
+            }
+            
+            // Aufgabe 7: Währung Verkauf
+            const bs7_correct = normalizeText(document.getElementById('bonus1-bs7-soll').value) === 'fll' &&
+                (normalizeText(document.getElementById('bonus1-bs7-haben').value) === 'dienstleistungsertrag' ||
+                 normalizeText(document.getElementById('bonus1-bs7-haben').value) === 'honorarertrag') &&
+                parseInt(document.getElementById('bonus1-bs7-betrag').value) === 7600;
+            
+            if (bs7_correct) {
+                correctCount++;
+                ['bonus1-bs7-soll', 'bonus1-bs7-haben', 'bonus1-bs7-betrag'].forEach(id => {
+                    document.getElementById(id).classList.add('border-green-500', 'bg-green-50');
+                });
+            } else {
+                ['bonus1-bs7-soll', 'bonus1-bs7-haben', 'bonus1-bs7-betrag'].forEach(id => {
+                    document.getElementById(id).classList.add('border-red-500', 'shake');
+                });
+            }
+
+            if (correctCount === totalBuchungen) {
+                gameState.points += 350;
+                gameState.correct++;
+                gameState.completedSteps.push(6);
+                updateDisplay();
+                awardBadge('komplex', 'Profi-Bucher');
+                showFeedback('bonus1', true, '🔥 Meisterhaft! Alle komplexen Buchungen perfekt.');
+                
+                setTimeout(() => {
+                    document.getElementById('bonus1-success').classList.remove('hidden');
+                    document.getElementById('bonus1-success').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    document.getElementById('bonus-2').classList.remove('locked');
+                    document.getElementById('bonus-2').classList.add('unlocked');
+                    
+                    // Story Popup nach 2 Sekunden
+                    setTimeout(() => {
+                        clearTimeout(currentTimer);
+                        showStoryPopup('bonus1_success');
+                        startLevelTimer('bonus2');
+                    }, 2000);
+                }, 1500);
+            } else {
+                gameState.errors++;
+                updateDisplay();
+                showFeedback('bonus1', false, `${correctCount} von ${totalBuchungen} Buchungen korrekt.`);
+            }
+        }
+
+        function checkBonus2() {
+            let correctCount = 0;
+            const totalBuchungen = 5;
+            
+            // Reset alle Felder
+            document.querySelectorAll('#bonus-2 input').forEach(input => {
+                input.classList.remove('border-green-500', 'bg-green-50', 'border-red-500', 'shake');
+            });
+            
+            // Aufgabe 1: Warenaufwand / VLL / 10'000
+            const bs1_correct = normalizeText(document.getElementById('bonus2-bs1-soll').value) === 'warenaufwand' &&
+                (normalizeText(document.getElementById('bonus2-bs1-haben').value) === 'vll' ||
+                 normalizeText(document.getElementById('bonus2-bs1-haben').value) === 'kreditoren') &&
+                parseInt(document.getElementById('bonus2-bs1-betrag').value) === 10000;
+            
+            if (bs1_correct) {
+                correctCount++;
+                ['bonus2-bs1-soll', 'bonus2-bs1-haben', 'bonus2-bs1-betrag'].forEach(id => {
+                    document.getElementById(id).classList.add('border-green-500', 'bg-green-50');
+                });
+            } else {
+                ['bonus2-bs1-soll', 'bonus2-bs1-haben', 'bonus2-bs1-betrag'].forEach(id => {
+                    document.getElementById(id).classList.add('border-red-500', 'shake');
+                });
+            }
+            
+            // Aufgabe 2: Transportkosten - Warenaufwand / Bank / 500
+            const bs2_correct = normalizeText(document.getElementById('bonus2-bs2-soll').value) === 'warenaufwand' &&
+                normalizeText(document.getElementById('bonus2-bs2-haben').value) === 'bank' &&
+                parseInt(document.getElementById('bonus2-bs2-betrag').value) === 500;
+            
+            if (bs2_correct) {
+                correctCount++;
+                ['bonus2-bs2-soll', 'bonus2-bs2-haben', 'bonus2-bs2-betrag'].forEach(id => {
+                    document.getElementById(id).classList.add('border-green-500', 'bg-green-50');
+                });
+            } else {
+                ['bonus2-bs2-soll', 'bonus2-bs2-haben', 'bonus2-bs2-betrag'].forEach(id => {
+                    document.getElementById(id).classList.add('border-red-500', 'shake');
+                });
+            }
+            
+            // Aufgabe 3: FLL / Warenertrag / 12'000
+            const bs3_correct = normalizeText(document.getElementById('bonus2-bs3-soll').value) === 'fll' &&
+                normalizeText(document.getElementById('bonus2-bs3-haben').value) === 'warenertrag' &&
+                parseInt(document.getElementById('bonus2-bs3-betrag').value) === 12000;
+            
+            if (bs3_correct) {
+                correctCount++;
+                ['bonus2-bs3-soll', 'bonus2-bs3-haben', 'bonus2-bs3-betrag'].forEach(id => {
+                    document.getElementById(id).classList.add('border-green-500', 'bg-green-50');
+                });
+            } else {
+                ['bonus2-bs3-soll', 'bonus2-bs3-haben', 'bonus2-bs3-betrag'].forEach(id => {
+                    document.getElementById(id).classList.add('border-red-500', 'shake');
+                });
+            }
+            
+            // Aufgabe 4: VLL / Warenaufwand / 1'000
+            const bs4_correct = (normalizeText(document.getElementById('bonus2-bs4-soll').value) === 'vll' ||
+                 normalizeText(document.getElementById('bonus2-bs4-soll').value) === 'kreditoren') &&
+                normalizeText(document.getElementById('bonus2-bs4-haben').value) === 'warenaufwand' &&
+                parseInt(document.getElementById('bonus2-bs4-betrag').value) === 1000;
+            
+            if (bs4_correct) {
+                correctCount++;
+                ['bonus2-bs4-soll', 'bonus2-bs4-haben', 'bonus2-bs4-betrag'].forEach(id => {
+                    document.getElementById(id).classList.add('border-green-500', 'bg-green-50');
+                });
+            } else {
+                ['bonus2-bs4-soll', 'bonus2-bs4-haben', 'bonus2-bs4-betrag'].forEach(id => {
+                    document.getElementById(id).classList.add('border-red-500', 'shake');
+                });
+            }
+            
+            // Aufgabe 5: Warenertrag / FLL / 2'000
+            const bs5_correct = normalizeText(document.getElementById('bonus2-bs5-soll').value) === 'warenertrag' &&
+                normalizeText(document.getElementById('bonus2-bs5-haben').value) === 'fll' &&
+                parseInt(document.getElementById('bonus2-bs5-betrag').value) === 2000;
+            
+            if (bs5_correct) {
+                correctCount++;
+                ['bonus2-bs5-soll', 'bonus2-bs5-haben', 'bonus2-bs5-betrag'].forEach(id => {
+                    document.getElementById(id).classList.add('border-green-500', 'bg-green-50');
+                });
+            } else {
+                ['bonus2-bs5-soll', 'bonus2-bs5-haben', 'bonus2-bs5-betrag'].forEach(id => {
+                    document.getElementById(id).classList.add('border-red-500', 'shake');
+                });
+            }
+
+            if (correctCount === totalBuchungen) {
+                gameState.points += 150;
+                gameState.correct++;
+                gameState.completedSteps.push(7);
+                updateDisplay();
+                awardBadge('waren', 'Warenhandel-Meister');
+                showFeedback('bonus2', true, '📦 Perfekt! Warenhandel inkl. Transportkosten gemeistert.');
+                
+                setTimeout(() => {
+                    document.getElementById('bonus2-success').classList.remove('hidden');
+                    document.getElementById('bonus2-success').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    document.getElementById('bonus-3').classList.remove('locked');
+                    document.getElementById('bonus-3').classList.add('unlocked');
+                    
+                    // Story Popup nach 2 Sekunden
+                    setTimeout(() => {
+                        clearTimeout(currentTimer);
+                        showStoryPopup('bonus2_success');
+                        startLevelTimer('bonus3');
+                    }, 2000);
+                }, 1500);
+            } else {
+                gameState.errors++;
+                updateDisplay();
+                showFeedback('bonus2', false, `${correctCount} von ${totalBuchungen} Buchungen korrekt.`);
+            }
+        }
+
+        function checkBonus3() {
+            let allCorrect = true;
+            let buchungenCorrect = 0;
+            
+            // Clear previous styling
+            const inputs = document.querySelectorAll('#bonus-3 input');
+            inputs.forEach(input => {
+                input.classList.remove('border-green-500', 'bg-green-50', 'border-red-500', 'shake');
+            });
+            
+            // Aufgabe 1a: Warenaufwand / Kasse / 1000
+            const bs1a_correct = normalizeText(document.getElementById('bonus3-bs1a-soll').value) === 'warenaufwand' &&
+                                normalizeText(document.getElementById('bonus3-bs1a-haben').value) === 'kasse' &&
+                                parseInt(document.getElementById('bonus3-bs1a-betrag').value) === 1000;
+            if (bs1a_correct) {
+                document.getElementById('bonus3-bs1a-soll').classList.add('border-green-500', 'bg-green-50');
+                document.getElementById('bonus3-bs1a-haben').classList.add('border-green-500', 'bg-green-50');
+                document.getElementById('bonus3-bs1a-betrag').classList.add('border-green-500', 'bg-green-50');
+                buchungenCorrect++;
+            } else {
+                document.getElementById('bonus3-bs1a-soll').classList.add('border-red-500', 'shake');
+                document.getElementById('bonus3-bs1a-haben').classList.add('border-red-500', 'shake');
+                document.getElementById('bonus3-bs1a-betrag').classList.add('border-red-500', 'shake');
+                allCorrect = false;
+            }
+            
+            // Aufgabe 1b: Guthaben Vorsteuer / Kasse / 81
+            const bs1b_correct = (normalizeText(document.getElementById('bonus3-bs1b-soll').value) === 'guthabenvorsteuer' ||
+                                 normalizeText(document.getElementById('bonus3-bs1b-soll').value) === 'vorsteuer') &&
+                                normalizeText(document.getElementById('bonus3-bs1b-haben').value) === 'kasse' &&
+                                parseInt(document.getElementById('bonus3-bs1b-betrag').value) === 81;
+            if (bs1b_correct) {
+                document.getElementById('bonus3-bs1b-soll').classList.add('border-green-500', 'bg-green-50');
+                document.getElementById('bonus3-bs1b-haben').classList.add('border-green-500', 'bg-green-50');
+                document.getElementById('bonus3-bs1b-betrag').classList.add('border-green-500', 'bg-green-50');
+                buchungenCorrect++;
+            } else {
+                document.getElementById('bonus3-bs1b-soll').classList.add('border-red-500', 'shake');
+                document.getElementById('bonus3-bs1b-haben').classList.add('border-red-500', 'shake');
+                document.getElementById('bonus3-bs1b-betrag').classList.add('border-red-500', 'shake');
+                allCorrect = false;
+            }
+            
+            // Aufgabe 2a: FLL / Warenertrag / 2000
+            const bs2a_correct = normalizeText(document.getElementById('bonus3-bs2a-soll').value) === 'fll' &&
+                                normalizeText(document.getElementById('bonus3-bs2a-haben').value) === 'warenertrag' &&
+                                parseInt(document.getElementById('bonus3-bs2a-betrag').value) === 2000;
+            if (bs2a_correct) {
+                document.getElementById('bonus3-bs2a-soll').classList.add('border-green-500', 'bg-green-50');
+                document.getElementById('bonus3-bs2a-haben').classList.add('border-green-500', 'bg-green-50');
+                document.getElementById('bonus3-bs2a-betrag').classList.add('border-green-500', 'bg-green-50');
+                buchungenCorrect++;
+            } else {
+                document.getElementById('bonus3-bs2a-soll').classList.add('border-red-500', 'shake');
+                document.getElementById('bonus3-bs2a-haben').classList.add('border-red-500', 'shake');
+                document.getElementById('bonus3-bs2a-betrag').classList.add('border-red-500', 'shake');
+                allCorrect = false;
+            }
+            
+            // Aufgabe 2b: FLL / Umsatzsteuerschuld / 162
+            const bs2b_correct = normalizeText(document.getElementById('bonus3-bs2b-soll').value) === 'fll' &&
+                                (normalizeText(document.getElementById('bonus3-bs2b-haben').value) === 'umsatzsteuerschuld' ||
+                                 normalizeText(document.getElementById('bonus3-bs2b-haben').value) === 'mwst' ||
+                                 normalizeText(document.getElementById('bonus3-bs2b-haben').value) === 'verbindlichkeitmwst') &&
+                                parseInt(document.getElementById('bonus3-bs2b-betrag').value) === 162;
+            if (bs2b_correct) {
+                document.getElementById('bonus3-bs2b-soll').classList.add('border-green-500', 'bg-green-50');
+                document.getElementById('bonus3-bs2b-haben').classList.add('border-green-500', 'bg-green-50');
+                document.getElementById('bonus3-bs2b-betrag').classList.add('border-green-500', 'bg-green-50');
+                buchungenCorrect++;
+            } else {
+                document.getElementById('bonus3-bs2b-soll').classList.add('border-red-500', 'shake');
+                document.getElementById('bonus3-bs2b-haben').classList.add('border-red-500', 'shake');
+                document.getElementById('bonus3-bs2b-betrag').classList.add('border-red-500', 'shake');
+                allCorrect = false;
+            }
+            
+            // Aufgabe 3a: Warenertrag / FLL / 40
+            const bs3a_correct = normalizeText(document.getElementById('bonus3-bs3a-soll').value) === 'warenertrag' &&
+                                normalizeText(document.getElementById('bonus3-bs3a-haben').value) === 'fll' &&
+                                parseInt(document.getElementById('bonus3-bs3a-betrag').value) === 40;
+            if (bs3a_correct) {
+                document.getElementById('bonus3-bs3a-soll').classList.add('border-green-500', 'bg-green-50');
+                document.getElementById('bonus3-bs3a-haben').classList.add('border-green-500', 'bg-green-50');
+                document.getElementById('bonus3-bs3a-betrag').classList.add('border-green-500', 'bg-green-50');
+                buchungenCorrect++;
+            } else {
+                document.getElementById('bonus3-bs3a-soll').classList.add('border-red-500', 'shake');
+                document.getElementById('bonus3-bs3a-haben').classList.add('border-red-500', 'shake');
+                document.getElementById('bonus3-bs3a-betrag').classList.add('border-red-500', 'shake');
+                allCorrect = false;
+            }
+            
+            // Aufgabe 3b: Umsatzsteuerschuld / FLL / 3
+            const bs3b_correct = (normalizeText(document.getElementById('bonus3-bs3b-soll').value) === 'umsatzsteuerschuld' ||
+                                 normalizeText(document.getElementById('bonus3-bs3b-soll').value) === 'mwst' ||
+                                 normalizeText(document.getElementById('bonus3-bs3b-soll').value) === 'verbindlichkeitmwst') &&
+                                normalizeText(document.getElementById('bonus3-bs3b-haben').value) === 'fll' &&
+                                parseInt(document.getElementById('bonus3-bs3b-betrag').value) === 3;
+            if (bs3b_correct) {
+                document.getElementById('bonus3-bs3b-soll').classList.add('border-green-500', 'bg-green-50');
+                document.getElementById('bonus3-bs3b-haben').classList.add('border-green-500', 'bg-green-50');
+                document.getElementById('bonus3-bs3b-betrag').classList.add('border-green-500', 'bg-green-50');
+                buchungenCorrect++;
+            } else {
+                document.getElementById('bonus3-bs3b-soll').classList.add('border-red-500', 'shake');
+                document.getElementById('bonus3-bs3b-haben').classList.add('border-red-500', 'shake');
+                document.getElementById('bonus3-bs3b-betrag').classList.add('border-red-500', 'shake');
+                allCorrect = false;
+            }
+            
+            // Aufgabe 3c: Bank / FLL / 2119
+            const bs3c_correct = normalizeText(document.getElementById('bonus3-bs3c-soll').value) === 'bank' &&
+                                normalizeText(document.getElementById('bonus3-bs3c-haben').value) === 'fll' &&
+                                parseInt(document.getElementById('bonus3-bs3c-betrag').value) === 2119;
+            if (bs3c_correct) {
+                document.getElementById('bonus3-bs3c-soll').classList.add('border-green-500', 'bg-green-50');
+                document.getElementById('bonus3-bs3c-haben').classList.add('border-green-500', 'bg-green-50');
+                document.getElementById('bonus3-bs3c-betrag').classList.add('border-green-500', 'bg-green-50');
+                buchungenCorrect++;
+            } else {
+                document.getElementById('bonus3-bs3c-soll').classList.add('border-red-500', 'shake');
+                document.getElementById('bonus3-bs3c-haben').classList.add('border-red-500', 'shake');
+                document.getElementById('bonus3-bs3c-betrag').classList.add('border-red-500', 'shake');
+                allCorrect = false;
+            }
+            
+            // Kontenführung
+            let kontenCorrect = true;
+            for (const [id, value] of Object.entries(solutions.bonus3.konten)) {
+                const input = document.getElementById(id);
+                if (parseInt(input.value) === value) {
+                    input.classList.add('border-green-500', 'bg-green-50');
+                } else {
+                    input.classList.add('border-red-500', 'shake');
+                    kontenCorrect = false;
+                    allCorrect = false;
+                }
+            }
+            
+            // Aufgabe 4a: Umsatzsteuerschuld / Guthaben Vorsteuer / 81
+            const bs4a_correct = (normalizeText(document.getElementById('bonus3-bs4a-soll').value) === 'umsatzsteuerschuld' ||
+                                 normalizeText(document.getElementById('bonus3-bs4a-soll').value) === 'mwst' ||
+                                 normalizeText(document.getElementById('bonus3-bs4a-soll').value) === 'verbindlichkeitmwst') &&
+                                (normalizeText(document.getElementById('bonus3-bs4a-haben').value) === 'guthabenvorsteuer' ||
+                                 normalizeText(document.getElementById('bonus3-bs4a-haben').value) === 'vorsteuer') &&
+                                parseInt(document.getElementById('bonus3-bs4a-betrag').value) === 81;
+            if (bs4a_correct) {
+                document.getElementById('bonus3-bs4a-soll').classList.add('border-green-500', 'bg-green-50');
+                document.getElementById('bonus3-bs4a-haben').classList.add('border-green-500', 'bg-green-50');
+                document.getElementById('bonus3-bs4a-betrag').classList.add('border-green-500', 'bg-green-50');
+                buchungenCorrect++;
+            } else {
+                document.getElementById('bonus3-bs4a-soll').classList.add('border-red-500', 'shake');
+                document.getElementById('bonus3-bs4a-haben').classList.add('border-red-500', 'shake');
+                document.getElementById('bonus3-bs4a-betrag').classList.add('border-red-500', 'shake');
+                allCorrect = false;
+            }
+            
+            // Aufgabe 4b: Umsatzsteuerschuld / Bank / 78
+            const bs4b_correct = (normalizeText(document.getElementById('bonus3-bs4b-soll').value) === 'umsatzsteuerschuld' ||
+                                 normalizeText(document.getElementById('bonus3-bs4b-soll').value) === 'mwst' ||
+                                 normalizeText(document.getElementById('bonus3-bs4b-soll').value) === 'verbindlichkeitmwst') &&
+                                normalizeText(document.getElementById('bonus3-bs4b-haben').value) === 'bank' &&
+                                parseInt(document.getElementById('bonus3-bs4b-betrag').value) === 78;
+            if (bs4b_correct) {
+                document.getElementById('bonus3-bs4b-soll').classList.add('border-green-500', 'bg-green-50');
+                document.getElementById('bonus3-bs4b-haben').classList.add('border-green-500', 'bg-green-50');
+                document.getElementById('bonus3-bs4b-betrag').classList.add('border-green-500', 'bg-green-50');
+                buchungenCorrect++;
+            } else {
+                document.getElementById('bonus3-bs4b-soll').classList.add('border-red-500', 'shake');
+                document.getElementById('bonus3-bs4b-haben').classList.add('border-red-500', 'shake');
+                document.getElementById('bonus3-bs4b-betrag').classList.add('border-red-500', 'shake');
+                allCorrect = false;
+            }
+
+            // Final check: ALL must be correct (9 Buchungen + Kontenführung)
+            if (allCorrect && buchungenCorrect === 9 && kontenCorrect) {
+                gameState.points += 200;
+                gameState.correct++;
+                gameState.completedSteps.push(8); // Bonus 3 = Step 8
+                updateDisplay();
+                awardBadge('mwst', 'MWST-Experte');
+                showFeedback('bonus3', true, '💰 Brillant! MWST-Buchungen inkl. Skonto und Abrechnung perfekt.');
+                
+                setTimeout(() => {
+                    document.getElementById('final-success').classList.remove('hidden');
+                    document.getElementById('final-success').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    
+                    // Story Popup nach 2 Sekunden
+                    setTimeout(() => {
+                        clearTimeout(currentTimer);
+                        showStoryPopup('bonus3_success');
+                    }, 2000);
+                }, 1500);
+            } else {
+                gameState.errors++;
+                updateDisplay();
+                showFeedback('bonus3', false, `${buchungenCorrect} von 9 Buchungen korrekt. ${kontenCorrect ? 'Kontenführung ✓' : 'Kontenführung ✗'} | Tipp: Bruttobeträge durch 1.081 teilen für Nettobeträge.`);
+            }
+        }
+
+        updateDisplay();
+
+        // ===== STORY-TELLING SYSTEM =====
+        
+        const STORY_MESSAGES = {
+            welcome: {
+                title: "Willkommen bei der TechStart AG!",
+                content: `Hallo!
+
+Ich bin Sarah Chen und habe gerade die TechStart AG gegründet. Ehrlich gesagt, brauche ich dringend deine Hilfe! Die Buchhaltung wächst mir über den Kopf und ich suche jemanden, der mich von Anfang an unterstützt.
+
+Ich stelle dich als meine Buchhalterin/meinen Buchhalter ein. Gemeinsam bauen wir dieses Unternehmen auf - von Tag 1 an.
+
+Bist du dabei?`,
+                button: "Los geht's!",
+                emoji: "📖"
+            },
+            grundlagen_success: {
+                title: "Nachricht von Sarah Chen, CEO",
+                content: `Liebe/r Buchhalterin/Buchhalter,
+
+Fantastisch! Du hast die Grundlagen perfekt gemeistert. Die Eröffnungsbilanz stimmt, alle Buchungen sind korrekt und die erste Erfolgsrechnung ist abgeschlossen.
+
+Als unsere neue Buchhaltungskraft hast du bewiesen, dass du die Basis verstehst. Aber das war erst der Anfang - jetzt expandieren wir! Internationale Geschäfte, komplexe Rabatte und MWST-Themen warten auf dich.
+
+Bist du bereit für die echten Herausforderungen?
+
+Mit Vertrauen,
+Sarah Chen
+CEO, TechStart AG`,
+                button: "Zu den Bonus-Levels",
+                emoji: "📧"
+            },
+            bonus1_success: {
+                title: "Nachricht von Sarah Chen, CEO",
+                content: `Liebe/r Buchhalterin/Buchhalter,
+
+Die komplexen Buchungen sind erledigt. Die Währungsumrechnungen und Skonto-Abrechnungen stimmen - das sind keine einfachen Themen.
+
+Als Nächstes expandieren wir: Wir steigen in den Handel mit Computer-Komponenten ein. Das bedeutet Warenhandel - Einkauf, Verkauf, Retouren und Transportkosten müssen sauber verbucht werden.
+
+Sarah`,
+                button: "Weiter",
+                emoji: "📧"
+            },
+            bonus2_success: {
+                title: "Nachricht von Sarah Chen, CEO",
+                content: `Liebe/r Buchhalterin/Buchhalter,
+
+Warenhandel abgeschlossen. Die Buchungen für Einkauf, Verkauf und Retouren sind korrekt.
+
+Jetzt fehlt nur noch die MWST-Abrechnung. Die brauchen wir für die Steuerbehörde - und die ist nicht trivial.
+
+Dann haben wir es geschafft.
+
+Sarah`,
+                button: "Weiter zur letzten Challenge",
+                emoji: "📧"
+            },
+            bonus3_success: {
+                title: "Nachricht von Sarah Chen, CEO",
+                content: `Liebe/r Buchhalterin/Buchhalter,
+
+UNGLAUBLICH! 🎉
+
+Du hast ALLE Herausforderungen gemeistert. Von den ersten unsicheren Buchungen bis zur perfekten MWST-Abrechnung - du hast die TechStart AG sicher durch alle Geschäftsfälle geführt.
+
+Ich habe eine Entscheidung getroffen: Ich möchte dir die Position als Head of Accounting anbieten. Du hast bewiesen, dass du nicht nur die Theorie beherrschst, sondern auch unter Druck präzise arbeitest.
+
+Willkommen im Führungsteam der TechStart AG!
+
+Du bist jetzt offiziell unser Rechnungswesen-Champion! 👑
+
+Mit größtem Respekt,
+Sarah Chen
+CEO, TechStart AG`,
+                button: "Challenge abschließen",
+                emoji: "📧"
+            },
+            urgency_grundlagen: {
+                title: "Nachricht von Sarah Chen",
+                content: `Liebe/r Buchhalterin/Buchhalter,
+
+Ich warte noch auf die ersten Auswertungen. Die Bilanz und die Geschäftsfälle müssen heute noch fertig werden - unsere Investoren erwarten die Zahlen.
+
+Kannst du mir ein Update geben, wann du fertig bist?
+
+Zeit läuft!
+Sarah`,
+                button: "Zurück zur Arbeit",
+                emoji: "📧"
+            },
+            urgency_bonus1: {
+                title: "Dringende Nachricht von Sarah Chen",
+                content: `Liebe/r Buchhalterin/Buchhalter,
+
+Die internationalen Geschäfte und Rabatt-Buchungen brauche ich für das Meeting heute Nachmittag. Wo bleiben die Auswertungen?
+
+Wir haben nicht mehr viel Zeit. Bitte mach vorwärts!
+
+Sarah`,
+                button: "Zurück zur Arbeit",
+                emoji: "📧"
+            },
+            urgency_bonus2: {
+                title: "Nachricht von Sarah Chen",
+                content: `Liebe/r Buchhalterin/Buchhalter,
+
+Ich warte noch auf die Warenhandels-Buchungen. Die sollten eigentlich zügig gehen - wo bleibst du?
+
+Wir brauchen die Zahlen heute noch!
+
+Sarah`,
+                button: "Zurück zur Arbeit",
+                emoji: "📧"
+            },
+            urgency_bonus3: {
+                title: "Nachricht von Sarah Chen",
+                content: `Liebe/r Buchhalterin/Buchhalter,
+
+Die MWST-Abrechnung ist noch nicht fertig. Wir müssen die Zahlung an die Steuerbehörde bald überweisen - dafür brauche ich deine Abrechnung.
+
+Kannst du bitte vorwärtsmachen? Die Frist läuft bald ab!
+
+Sarah`,
+                button: "Zurück zur Arbeit",
+                emoji: "📧"
+            }
+        };
+
+        // Inactivity Timer
+        const INACTIVITY_TIMES = {
+            grundlagen: 30 * 60 * 1000,  // 30 Minuten
+            bonus1: 25 * 60 * 1000,      // 25 Minuten
+            bonus2: 15 * 60 * 1000,      // 15 Minuten
+            bonus3: 30 * 60 * 1000       // 30 Minuten
+        };
+
+        let currentTimer = null;
+        let currentLevel = null;
+        let urgencyShown = {};
+
+        function showStoryPopup(messageKey) {
+            const message = STORY_MESSAGES[messageKey];
+            const popup = document.getElementById('story-popup');
+            const content = document.getElementById('story-content');
+            const button = document.getElementById('story-button');
+            
+            // Update header emoji
+            const headerEmoji = popup.querySelector('.brief-header .text-5xl');
+            headerEmoji.textContent = message.emoji;
+            
+            // Update content
+            content.innerHTML = `<h2 class="text-2xl font-bold mb-4">${message.title}</h2>
+                                 <div class="whitespace-pre-line">${message.content}</div>`;
+            
+            // Update button
+            button.textContent = message.button;
+            button.onclick = () => closeStoryPopup(messageKey);
+            
+            // Show popup
+            popup.classList.add('active');
+        }
+
+        function closeStoryPopup(messageKey) {
+            document.getElementById('story-popup').classList.remove('active');
+            
+            // Special actions after closing certain popups
+            if (messageKey === 'grundlagen_success') {
+                // Scroll to bonus section
+                setTimeout(() => {
+                    document.getElementById('bonus-1').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 300);
+            }
+        }
+
+        function startLevelTimer(level) {
+            // Clear existing timer
+            if (currentTimer) {
+                clearTimeout(currentTimer);
+            }
+            
+            // Don't show urgency message twice for same level
+            if (urgencyShown[level]) {
+                return;
+            }
+            
+            currentLevel = level;
+            
+            // Set new timer
+            currentTimer = setTimeout(() => {
+                showStoryPopup('urgency_' + level);
+                urgencyShown[level] = true;
+            }, INACTIVITY_TIMES[level]);
+        }
+
+        function resetTimer() {
+            if (currentLevel && currentTimer) {
+                clearTimeout(currentTimer);
+                // Restart timer for current level (only if not already shown)
+                if (!urgencyShown[currentLevel]) {
+                    startLevelTimer(currentLevel);
+                }
+            }
+        }
+
+        // Event listeners for activity
+        document.addEventListener('input', resetTimer);
+        document.addEventListener('click', resetTimer);
+
+        // Show welcome popup on load
+        // Start Challenge Funktion
+        function startChallenge() {
+            // Verstecke Start-Button
+            document.getElementById('start-button').style.display = 'none';
+            
+            // Entsperre Grundlagen-Container
+            document.getElementById('grundlagen-container').classList.remove('locked');
+            
+            // Zeige Welcome Popup
+            showStoryPopup('welcome');
+            
+            // Starte Timer für Grundlagen
+            startLevelTimer('grundlagen');
+        }
+
+        // Kein automatisches Popup mehr beim Laden
+        window.addEventListener('load', () => {
+            // Popup wird erst beim Klick auf Start-Button gezeigt
+        });
+    </script>
+
+    <!-- Story Popup -->
+    <div id="story-popup" class="story-popup-overlay">
+        <div class="story-popup">
+            <div class="brief-header">
+                <div class="flex items-center gap-4">
+                    <div class="text-5xl">👩‍💼</div>
+                    <div>
+                        <div class="text-2xl font-bold">Sarah Chen</div>
+                        <div class="text-sm opacity-90">CEO, TechStart AG</div>
+                    </div>
+                </div>
+            </div>
+            <div id="story-content" class="brief-content">
+                <!-- Content wird dynamisch eingefügt -->
+            </div>
+            <div class="brief-footer">
+                <button id="story-button" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-lg font-bold hover:from-indigo-700 hover:to-purple-700 transition">
+                    Los geht's!
+                </button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
