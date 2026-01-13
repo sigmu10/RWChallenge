@@ -110,7 +110,13 @@
 
         <!-- Badge Sammlung -->
         <div class="bg-white rounded-xl shadow-xl p-6 mb-8">
-            <h2 class="text-2xl font-bold mb-4 text-indigo-800">🏆 Deine Auszeichnungen</h2>
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-indigo-800">🏆 Deine Auszeichnungen</h2>
+                <button onclick="resetProgress()" class="text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition flex items-center gap-2">
+                    <span>🔄</span>
+                    <span>Neu starten</span>
+                </button>
+            </div>
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <div id="badge-grundlagen" class="border-2 border-gray-300 rounded-lg p-4 text-center opacity-30">
                     <div class="text-5xl mb-2">🎓</div>
@@ -1158,8 +1164,109 @@
             errors: 0,
             completedSteps: [],
             earnedBadges: [],
-            attempts: {} // Track attempts per step
+            unlockedBonusLevels: [],
+            currentLevel: 'grundlagen',
+            allInputValues: {},
+            attempts: {}, // Track attempts per step
+            timestamp: null,
+            version: '1.0'
         };
+
+        // LocalStorage Funktionen
+        const STORAGE_KEY = 'rw_challenge_progress';
+        
+        function saveProgress() {
+            try {
+                // Sammle alle Input-Werte
+                const inputs = {};
+                document.querySelectorAll('input[type="text"], input[type="number"]').forEach(input => {
+                    if (input.value) {
+                        inputs[input.id] = input.value;
+                    }
+                });
+                
+                gameState.allInputValues = inputs;
+                gameState.timestamp = new Date().toISOString();
+                
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState));
+                console.log('Progress saved');
+            } catch (error) {
+                console.error('Error saving progress:', error);
+            }
+        }
+        
+        function loadProgress() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    const loadedState = JSON.parse(saved);
+                    
+                    // Prüfe Version
+                    if (loadedState.version === gameState.version) {
+                        return loadedState;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading progress:', error);
+            }
+            return null;
+        }
+        
+        function resetProgress() {
+            if (confirm('Möchtest du wirklich von vorne beginnen? Dein aktueller Fortschritt geht verloren.')) {
+                localStorage.removeItem(STORAGE_KEY);
+                location.reload();
+            }
+        }
+        
+        function restoreInputValues(values) {
+            for (let id in values) {
+                const input = document.getElementById(id);
+                if (input) {
+                    input.value = values[id];
+                }
+            }
+        }
+        
+        function restoreGameState(savedState) {
+            gameState = savedState;
+            
+            // Restore input values
+            if (savedState.allInputValues) {
+                restoreInputValues(savedState.allInputValues);
+            }
+            
+            // Restore unlocked levels
+            if (savedState.completedSteps.includes(5)) {
+                document.getElementById('grundlagen-container').classList.remove('locked');
+                document.getElementById('bonus-section').classList.remove('hidden');
+            }
+            
+            // Restore bonus levels
+            if (savedState.unlockedBonusLevels.includes('bonus1')) {
+                document.getElementById('bonus-1').classList.remove('locked');
+                document.getElementById('bonus-1').classList.add('unlocked');
+            }
+            if (savedState.unlockedBonusLevels.includes('bonus2')) {
+                document.getElementById('bonus-2').classList.remove('locked');
+                document.getElementById('bonus-2').classList.add('unlocked');
+            }
+            if (savedState.unlockedBonusLevels.includes('bonus3')) {
+                document.getElementById('bonus-3').classList.remove('locked');
+                document.getElementById('bonus-3').classList.add('unlocked');
+            }
+            
+            // Restore badges
+            savedState.earnedBadges.forEach(badgeId => {
+                const badge = document.getElementById('badge-' + badgeId);
+                if (badge) {
+                    badge.classList.remove('opacity-30', 'border-gray-300');
+                    badge.classList.add('opacity-100', 'border-green-500', 'bg-green-50');
+                }
+            });
+            
+            updateDisplay();
+        }
 
         const solutions = {
             step2: [
@@ -1294,6 +1401,9 @@
             
             document.getElementById('progress-bar').style.width = progress + '%';
             document.getElementById('progress-text').textContent = Math.round(progress) + '%';
+            
+            // Auto-save nach jedem Update
+            saveProgress();
         }
 
         function unlockStep(step) {
@@ -1593,6 +1703,7 @@
                     document.getElementById('bonus-section').classList.remove('hidden');
                     document.getElementById('bonus-1').classList.remove('locked');
                     document.getElementById('bonus-1').classList.add('unlocked');
+                    gameState.unlockedBonusLevels.push('bonus1');
                     
                     // Story Popup nach 2 Sekunden
                     setTimeout(() => {
@@ -1802,6 +1913,7 @@
                     document.getElementById('bonus1-success').scrollIntoView({ behavior: 'smooth', block: 'start' });
                     document.getElementById('bonus-2').classList.remove('locked');
                     document.getElementById('bonus-2').classList.add('unlocked');
+                    gameState.unlockedBonusLevels.push('bonus2');
                     
                     // Story Popup nach 2 Sekunden
                     setTimeout(() => {
@@ -1921,6 +2033,7 @@
                     document.getElementById('bonus2-success').scrollIntoView({ behavior: 'smooth', block: 'start' });
                     document.getElementById('bonus-3').classList.remove('locked');
                     document.getElementById('bonus-3').classList.add('unlocked');
+                    gameState.unlockedBonusLevels.push('bonus3');
                     
                     // Story Popup nach 2 Sekunden
                     setTimeout(() => {
@@ -2351,6 +2464,45 @@ Sarah`,
 
         // Show welcome popup on load
         // Start Challenge Funktion
+        function continueProgress() {
+            document.getElementById('continue-popup').classList.remove('active');
+            // Progress ist bereits geladen, einfach weitermachen
+        }
+        
+        function showContinueDialog(savedState) {
+            // Format date and time
+            const date = new Date(savedState.timestamp);
+            const dateStr = date.toLocaleDateString('de-CH');
+            const timeStr = date.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
+            
+            document.getElementById('last-save-date').textContent = dateStr;
+            document.getElementById('last-save-time').textContent = timeStr;
+            
+            // Show badge count
+            const badgeCount = savedState.earnedBadges.length;
+            document.getElementById('progress-badges').textContent = `• ${badgeCount} von 4 Badges erhalten`;
+            
+            // Show current level
+            let levelText = '';
+            if (savedState.completedSteps.includes(8)) {
+                levelText = 'Abgeschlossen! 🎉';
+            } else if (savedState.unlockedBonusLevels.includes('bonus3')) {
+                levelText = 'MWST-Experte Level';
+            } else if (savedState.unlockedBonusLevels.includes('bonus2')) {
+                levelText = 'Warenhandel-Meister Level';
+            } else if (savedState.unlockedBonusLevels.includes('bonus1')) {
+                levelText = 'Profi-Bucher Level';
+            } else if (savedState.completedSteps.includes(5)) {
+                levelText = 'Bonus-Levels freigeschaltet';
+            } else {
+                levelText = 'Grundlagen';
+            }
+            document.getElementById('progress-level').textContent = `• Aktueller Stand: ${levelText}`;
+            
+            // Show dialog
+            document.getElementById('continue-popup').classList.add('active');
+        }
+        
         function startChallenge() {
             // Verstecke Start-Button
             document.getElementById('start-button').style.display = 'none';
@@ -2365,11 +2517,69 @@ Sarah`,
             startLevelTimer('grundlagen');
         }
 
-        // Kein automatisches Popup mehr beim Laden
+        // Load Progress beim Laden
         window.addEventListener('load', () => {
-            // Popup wird erst beim Klick auf Start-Button gezeigt
+            const savedState = loadProgress();
+            
+            if (savedState) {
+                // Fortschritt gefunden - zeige Dialog
+                restoreGameState(savedState);
+                showContinueDialog(savedState);
+            }
+            // Sonst wartet man auf Start-Button
+        });
+        
+        // Auto-save bei Input-Änderungen (mit Debounce)
+        let saveTimeout;
+        document.addEventListener('input', (e) => {
+            if (e.target.tagName === 'INPUT') {
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(saveProgress, 2000); // Save nach 2 Sek Inaktivität
+            }
+        });
+        
+        // Save before unload
+        window.addEventListener('beforeunload', () => {
+            saveProgress();
         });
     </script>
+
+    <!-- Continue/Reset Popup -->
+    <div id="continue-popup" class="story-popup-overlay">
+        <div class="story-popup">
+            <div class="brief-header">
+                <div class="flex items-center gap-4">
+                    <div class="text-5xl">📂</div>
+                    <div>
+                        <div class="text-2xl font-bold">Gespeicherter Fortschritt gefunden!</div>
+                    </div>
+                </div>
+            </div>
+            <div class="brief-content">
+                <p class="mb-4">Du hast zuletzt am <strong id="last-save-date"></strong> um <strong id="last-save-time"></strong> Uhr an der Challenge gearbeitet.</p>
+                
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded mb-4">
+                    <p class="font-semibold mb-2">Dein Fortschritt:</p>
+                    <ul class="space-y-1">
+                        <li id="progress-badges"></li>
+                        <li id="progress-level"></li>
+                    </ul>
+                </div>
+                
+                <p class="text-gray-600">Möchtest du weitermachen oder von vorne beginnen?</p>
+            </div>
+            <div class="brief-footer">
+                <div class="grid grid-cols-2 gap-4">
+                    <button onclick="continueProgress()" class="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-3 rounded-lg font-bold hover:from-green-600 hover:to-emerald-700 transition">
+                        Weitermachen
+                    </button>
+                    <button onclick="resetProgress()" class="bg-gradient-to-r from-red-500 to-pink-600 text-white px-6 py-3 rounded-lg font-bold hover:from-red-600 hover:to-pink-700 transition">
+                        Neu starten
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Story Popup -->
     <div id="story-popup" class="story-popup-overlay">
