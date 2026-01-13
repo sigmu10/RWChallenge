@@ -112,9 +112,9 @@
         <div class="bg-white rounded-xl shadow-xl p-6 mb-8">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-2xl font-bold text-indigo-800">🏆 Deine Auszeichnungen</h2>
-                <button onclick="resetProgress()" class="text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition flex items-center gap-2">
-                    <span>🔄</span>
-                    <span>Neu starten</span>
+                <button onclick="manualSave()" class="text-sm bg-green-100 hover:bg-green-200 text-green-700 px-4 py-2 rounded-lg transition flex items-center gap-2">
+                    <span>💾</span>
+                    <span>Fortschritt sichern</span>
                 </button>
             </div>
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -156,15 +156,15 @@
             </div>
         </div>
 
-        <!-- Start Button -->
-        <div class="text-center mb-8">
+        <!-- Start Button (nur beim ersten Besuch) -->
+        <div id="start-section" class="text-center mb-8">
             <button id="start-button" onclick="startChallenge()" class="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-8 py-4 rounded-lg font-bold text-lg hover:from-green-600 hover:to-emerald-700 transition shadow-lg">
-                🚀 Start mit Schritt 1
+                🚀 Start RW Challenge
             </button>
         </div>
 
-        <!-- Grundlagen Container (locked bis Start-Button geklickt) -->
-        <div id="grundlagen-container" class="locked">
+        <!-- Grundlagen Container (KEIN Lock mehr) -->
+        <div id="grundlagen-container" class="">
             <div class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl p-6 mb-8">
                 <h2 class="text-3xl font-bold mb-2">Teil 1: Buchhaltungs-Grundlagen 🎯</h2>
                 <p class="text-lg">Verdiene dir den "Grundlagen-Meister" Badge</p>
@@ -251,10 +251,6 @@
                     </div>
                 </div>
             </div>
-
-            <button onclick="unlockStep(2)" class="mt-6 bg-indigo-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-indigo-700 transition">
-                Weiter zu Schritt 2 →
-            </button>
         </div>
 
         <!-- SCHRITT 2: Buchungssätze -->
@@ -1176,12 +1172,20 @@
         const STORAGE_KEY = 'rw_challenge_progress';
         
         function saveProgress() {
+            console.log('→ Saving progress...');
+            
             try {
                 // Sammle alle Input-Werte
                 const inputs = {};
+                let filledCount = 0;
+                
                 document.querySelectorAll('input[type="text"], input[type="number"]').forEach(input => {
-                    if (input.value) {
-                        inputs[input.id] = input.value;
+                    if (input.id) {
+                        const value = input.value || '';
+                        inputs[input.id] = value;
+                        if (value) {
+                            filledCount++;
+                        }
                     }
                 });
                 
@@ -1189,7 +1193,11 @@
                 gameState.timestamp = new Date().toISOString();
                 
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState));
-                console.log('Progress saved');
+                console.log('✓ Progress saved:', Object.keys(inputs).length, 'inputs total,', filledCount, 'filled');
+                if (filledCount > 0) {
+                    const samples = Object.entries(inputs).filter(([k,v]) => v).slice(0, 3);
+                    console.log('  Sample filled inputs:', samples);
+                }
             } catch (error) {
                 console.error('Error saving progress:', error);
             }
@@ -1212,62 +1220,36 @@
             return null;
         }
         
-        function resetProgress() {
-            if (confirm('Möchtest du wirklich von vorne beginnen? Dein aktueller Fortschritt geht verloren.')) {
-                localStorage.removeItem(STORAGE_KEY);
-                location.reload();
-            }
-        }
-        
-        function restoreInputValues(values) {
-            for (let id in values) {
-                const input = document.getElementById(id);
-                if (input) {
-                    input.value = values[id];
-                }
-            }
-        }
-        
-        function restoreGameState(savedState) {
-            gameState = savedState;
+        function manualSave() {
+            console.log('=== MANUAL SAVE TEST ===');
             
-            // Restore input values
-            if (savedState.allInputValues) {
-                restoreInputValues(savedState.allInputValues);
+            // Test: Finde ein spezifisches Feld
+            const testField = document.getElementById('bs1-soll');
+            if (testField) {
+                console.log('Test field bs1-soll value:', testField.value);
+                console.log('Test field exists:', true);
+            } else {
+                console.log('Test field bs1-soll NOT FOUND!');
             }
             
-            // Restore unlocked levels
-            if (savedState.completedSteps.includes(5)) {
-                document.getElementById('grundlagen-container').classList.remove('locked');
-                document.getElementById('bonus-section').classList.remove('hidden');
-            }
-            
-            // Restore bonus levels
-            if (savedState.unlockedBonusLevels.includes('bonus1')) {
-                document.getElementById('bonus-1').classList.remove('locked');
-                document.getElementById('bonus-1').classList.add('unlocked');
-            }
-            if (savedState.unlockedBonusLevels.includes('bonus2')) {
-                document.getElementById('bonus-2').classList.remove('locked');
-                document.getElementById('bonus-2').classList.add('unlocked');
-            }
-            if (savedState.unlockedBonusLevels.includes('bonus3')) {
-                document.getElementById('bonus-3').classList.remove('locked');
-                document.getElementById('bonus-3').classList.add('unlocked');
-            }
-            
-            // Restore badges
-            savedState.earnedBadges.forEach(badgeId => {
-                const badge = document.getElementById('badge-' + badgeId);
-                if (badge) {
-                    badge.classList.remove('opacity-30', 'border-gray-300');
-                    badge.classList.add('opacity-100', 'border-green-500', 'bg-green-50');
+            // Zähle gefüllte Felder manuell
+            let manualCount = 0;
+            document.querySelectorAll('input[type="text"], input[type="number"]').forEach(input => {
+                if (input.value) {
+                    manualCount++;
+                    if (manualCount <= 3) {
+                        console.log(`Filled input: ${input.id} = "${input.value}"`);
+                    }
                 }
             });
+            console.log(`Manual count: ${manualCount} filled inputs`);
             
-            updateDisplay();
+            // Jetzt normales Save
+            saveProgress();
+            alert(`Gespeichert!\n${manualCount} gefüllte Felder\nSchau in die Konsole für Details`);
         }
-
+        
+        
         const solutions = {
             step2: [
                 { soll: 'fll', haben: 'dienstleistungsertrag', betrag: 5000 },
@@ -1402,8 +1384,7 @@
             document.getElementById('progress-bar').style.width = progress + '%';
             document.getElementById('progress-text').textContent = Math.round(progress) + '%';
             
-            // Auto-save nach jedem Update
-            saveProgress();
+            // KEIN Auto-save mehr! Nur manuell speichern
         }
 
         function unlockStep(step) {
@@ -2466,7 +2447,81 @@ Sarah`,
         // Start Challenge Funktion
         function continueProgress() {
             document.getElementById('continue-popup').classList.remove('active');
-            // Progress ist bereits geladen, einfach weitermachen
+            
+            // Lade gespeicherten State
+            const savedState = loadProgress();
+            if (!savedState) {
+                alert('Kein Fortschritt gefunden!');
+                return;
+            }
+            
+            console.log('=== RESTORING STATE ===');
+            
+            // Restore gameState
+            gameState = savedState;
+            
+            // Restore bonus section
+            if (savedState.completedSteps.includes(5)) {
+                document.getElementById('bonus-section').classList.remove('hidden');
+            }
+            
+            // Restore bonus levels
+            if (savedState.unlockedBonusLevels && savedState.unlockedBonusLevels.includes('bonus1')) {
+                document.getElementById('bonus-1').classList.remove('locked');
+                document.getElementById('bonus-1').classList.add('unlocked');
+            }
+            if (savedState.unlockedBonusLevels && savedState.unlockedBonusLevels.includes('bonus2')) {
+                document.getElementById('bonus-2').classList.remove('locked');
+                document.getElementById('bonus-2').classList.add('unlocked');
+            }
+            if (savedState.unlockedBonusLevels && savedState.unlockedBonusLevels.includes('bonus3')) {
+                document.getElementById('bonus-3').classList.remove('locked');
+                document.getElementById('bonus-3').classList.add('unlocked');
+            }
+            
+            // Restore badges
+            if (savedState.earnedBadges) {
+                savedState.earnedBadges.forEach(badgeId => {
+                    const badge = document.getElementById('badge-' + badgeId);
+                    if (badge) {
+                        badge.classList.remove('opacity-30', 'border-gray-300');
+                        badge.classList.add('opacity-100', 'border-green-500', 'bg-green-50');
+                    }
+                });
+            }
+            
+            // Restore input values
+            if (savedState.allInputValues) {
+                const filledInputs = Object.entries(savedState.allInputValues).filter(([k,v]) => v);
+                console.log('Restoring', filledInputs.length, 'filled inputs');
+                
+                for (let [id, value] of Object.entries(savedState.allInputValues)) {
+                    const input = document.getElementById(id);
+                    if (input && value) {
+                        input.value = value;
+                        console.log(`  Restored: ${id} = "${value}"`);
+                    }
+                }
+            }
+            
+            // Update display
+            updateDisplay();
+            
+            // Starte Timer
+            const currentLevel = determineCurrentLevel(gameState);
+            if (currentLevel) {
+                startLevelTimer(currentLevel);
+            }
+            
+            console.log('=== RESTORE COMPLETE ===');
+        }
+        
+        function determineCurrentLevel(state) {
+            if (state.completedSteps.includes(8)) return null; // Fertig
+            if (state.unlockedBonusLevels.includes('bonus3')) return 'bonus3';
+            if (state.unlockedBonusLevels.includes('bonus2')) return 'bonus2';
+            if (state.unlockedBonusLevels.includes('bonus1')) return 'bonus1';
+            return 'grundlagen';
         }
         
         function showContinueDialog(savedState) {
@@ -2504,11 +2559,8 @@ Sarah`,
         }
         
         function startChallenge() {
-            // Verstecke Start-Button
-            document.getElementById('start-button').style.display = 'none';
-            
-            // Entsperre Grundlagen-Container
-            document.getElementById('grundlagen-container').classList.remove('locked');
+            // Verstecke Start-Section
+            document.getElementById('start-section').style.display = 'none';
             
             // Zeige Welcome Popup
             showStoryPopup('welcome');
@@ -2516,30 +2568,26 @@ Sarah`,
             // Starte Timer für Grundlagen
             startLevelTimer('grundlagen');
         }
-
+        
         // Load Progress beim Laden
         window.addEventListener('load', () => {
             const savedState = loadProgress();
             
             if (savedState) {
-                // Fortschritt gefunden - zeige Dialog
-                restoreGameState(savedState);
+                // Gespeicherter Fortschritt → Verstecke Start-Button, zeige Continue Dialog
+                console.log('Saved state found, showing continue dialog');
+                document.getElementById('start-section').style.display = 'none';
                 showContinueDialog(savedState);
-            }
-            // Sonst wartet man auf Start-Button
-        });
-        
-        // Auto-save bei Input-Änderungen (mit Debounce)
-        let saveTimeout;
-        document.addEventListener('input', (e) => {
-            if (e.target.tagName === 'INPUT') {
-                clearTimeout(saveTimeout);
-                saveTimeout = setTimeout(saveProgress, 2000); // Save nach 2 Sek Inaktivität
+            } else {
+                // Kein Fortschritt → Zeige Start-Button
+                console.log('No saved state, showing start button');
+                // Start-Button ist bereits sichtbar, nichts zu tun
             }
         });
         
-        // Save before unload
+        // Save before unload (Backup)
         window.addEventListener('beforeunload', () => {
+            console.log('Page closing, saving...');
             saveProgress();
         });
     </script>
@@ -2565,18 +2613,11 @@ Sarah`,
                         <li id="progress-level"></li>
                     </ul>
                 </div>
-                
-                <p class="text-gray-600">Möchtest du weitermachen oder von vorne beginnen?</p>
             </div>
             <div class="brief-footer">
-                <div class="grid grid-cols-2 gap-4">
-                    <button onclick="continueProgress()" class="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-3 rounded-lg font-bold hover:from-green-600 hover:to-emerald-700 transition">
-                        Weitermachen
-                    </button>
-                    <button onclick="resetProgress()" class="bg-gradient-to-r from-red-500 to-pink-600 text-white px-6 py-3 rounded-lg font-bold hover:from-red-600 hover:to-pink-700 transition">
-                        Neu starten
-                    </button>
-                </div>
+                <button onclick="continueProgress()" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-3 rounded-lg font-bold hover:from-green-600 hover:to-emerald-700 transition">
+                    Weitermachen
+                </button>
             </div>
         </div>
     </div>
